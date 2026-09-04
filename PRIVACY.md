@@ -1,0 +1,107 @@
+# URL Shield — Privacy Policy
+
+_Last updated: 2026-09-04 · Detection logic v3.0.0_
+
+This policy explains exactly what URL Shield processes, what (if
+anything) leaves your device, and on what legal basis. It is written to
+GDPR Art. 13/14.
+
+## Who is the controller
+
+The developer/distributor of this extension. Contact:
+<https://github.com/sophiekeesing/URLphishingDetector/issues>. Replace
+this with a real contact point before public distribution.
+
+## What the extension does by default
+
+When you click the URL Shield icon it inspects the address of the
+current tab **entirely on your device**:
+
+- structural heuristics (raw-IP host, `http://`, deep subdomain chains,
+  brand look-alikes, abused TLDs);
+- a small blocklist bundled inside the extension.
+
+No network request is made. No browsing history is stored. The only
+data written to storage is your settings (below) and a short-lived
+in-memory cache of recent verdicts that is discarded when the browser
+suspends the extension.
+
+**Legal basis:** legitimate interest in network and information
+security, GDPR Art. 6(1)(f) and Recital 49. A balancing test is
+recorded in [`docs/LIA.md`](docs/LIA.md).
+
+## Optional features you can switch on
+
+These are **off until you enable them** on the options page. Enabling
+one is your consent (GDPR Art. 6(1)(a)) for that processing. You can
+withdraw at any time; the on-device checks keep working.
+
+### 1. Google Safe Browsing check
+
+- **What is sent:** for the current page, the extension derives host +
+  path combinations (the query string and fragment are discarded),
+  hashes each with SHA-256, and sends **only the first 4 bytes of each
+  hash** to `https://safebrowsing.googleapis.com`. The full address is
+  never transmitted.
+- **What comes back:** a set of candidate full hashes. The exact match
+  is completed locally. Google does not learn which URL you visited
+  (this is the k-anonymity model Google Safe Browsing is designed
+  around).
+- **Recipient:** Google Ireland Ltd., acting as a processor. You should
+  put a Data Processing Agreement (GDPR Art. 28) in place before
+  distributing. Google's terms: <https://developers.google.com/safe-browsing>.
+- **Retention by us:** none beyond the 10-minute in-memory cache.
+
+### 2. DNS blocklist cross-check
+
+- **What is sent:** the **hostname only** (no path, no query) of the
+  current page, to `https://cloudflare-dns.com` and
+  `https://dns.quad9.net` over HTTPS.
+- **Why:** Quad9 refuses to resolve domains on its malware/phishing
+  feeds; Cloudflare does not filter. Disagreement is a strong signal.
+- **Recipients:** Cloudflare, Inc. and the Quad9 Foundation, each an
+  independent controller with its own policy
+  (<https://www.cloudflare.com/privacypolicy/>,
+  <https://quad9.net/privacy/policy/>).
+- **Retention by us:** none beyond the 10-minute in-memory cache.
+
+### 3. "Scan as I browse"
+
+Enabling this grants the `tabs` permission and lets the extension read
+the URL of pages you navigate to so it can show a badge automatically.
+It still only runs the checks you have enabled. Disabling it revokes
+the permission.
+
+## What we never do
+
+- No browsing history, bookmarks, form data, or page content is read or
+  stored.
+- No analytics, telemetry, crash reporting, advertising, or
+  fingerprinting.
+- No data is sold or shared with anyone other than the recipients named
+  above, and only as described.
+- No third party used here (Google Safe Browsing, Cloudflare, Quad9)
+  publishes or crowd-shares the queries URL Shield sends. Services that
+  do (e.g. VirusTotal, urlscan.io public scans) are deliberately **not**
+  integrated.
+
+## Storage on your device (ePrivacy / § 25 TDDDG)
+
+`chrome.storage.sync` holds your settings and, if you entered one, your
+Safe Browsing API key. This is strictly necessary for the security
+function you asked for, so no separate cookie-style consent banner is
+used. There is no non-essential storage.
+
+## Your rights
+
+Access, rectification, erasure, restriction, objection, portability
+(GDPR Art. 15–21). Because almost all processing is local and transient,
+in practice: use the options page to turn features off and clear your
+settings ("Turn everything off & revoke permissions"), or remove the
+extension. For the hash-prefix queries already sent to Google/Cloudflare/
+Quad9, exercise rights with those parties directly.
+
+## Changes
+
+Material changes will bump the "Last updated" date and the detection
+logic version, and will be noted in the repository changelog.

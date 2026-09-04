@@ -299,6 +299,27 @@ body {
   background: #c4c9d2;
 }
 
+/* ---------- Cloud-off note ---------- */
+.cloud-note {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  background: #f4f6fb;
+  border: 1px solid #e3e8f2;
+  border-radius: 8px;
+  font-size: 11.5px;
+  color: #5b6472;
+}
+
+.cloud-note a {
+  color: #4f7cff;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.cloud-note a:hover {
+  text-decoration: underline;
+}
+
 /* ---------- Footer ---------- */
 .popup__footer {
   margin-top: 16px;
@@ -307,6 +328,10 @@ body {
   font-size: 10.5px;
   color: #9aa1ad;
   text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 10px;
 }
 
 .popup__footer a {
@@ -426,9 +451,89 @@ body {
 }
 
 .options__note code,
-.options__steps code {
+.options__steps code,
+.opt-card code {
   background: #f1f2f5;
   padding: 1px 4px;
   border-radius: 4px;
   font-size: 11.5px;
+}
+
+/* ---------- Options: opt-in cards ---------- */
+.opt-card {
+  border: 1px solid #e3e8f2;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 16px 0;
+  background: #fbfcfe;
+}
+
+.opt-card__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.opt-card__head input {
+  width: 16px;
+  height: 16px;
+}
+
+.opt-card__body {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #4b5261;
+}
+
+.opt-card__steps {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #4b5261;
+}
+
+.opt-card__steps a {
+  color: #4f7cff;
+}
+
+.opt-card__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 6px;
+}
+
+.opt-card__row input {
+  flex: 1;
+  min-width: 160px;
+  padding: 9px 12px;
+  border: 1px solid #d7dbe3;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+}
+
+.opt-card__row input:focus {
+  border-color: #4f7cff;
+  box-shadow: 0 0 0 3px rgba(79, 124, 255, 0.15);
+}
+
+.opt-card__row button {
+  padding: 9px 14px;
+  background: #4f7cff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.opt-card .options__status {
+  display: block;
+  margin-top: 6px;
 }
