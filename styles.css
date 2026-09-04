@@ -198,44 +198,6 @@ body {
   color: #fff;
 }
 
-/* ---------- Examples ---------- */
-.examples__title {
-  margin: 0 0 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #6b7280;
-}
-
-.examples__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.chip {
-  border: 1px solid #d7dbe3;
-  background: #f7f8fa;
-  color: #333;
-  font-size: 11px;
-  padding: 5px 10px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.chip:hover {
-  background: #eef1f5;
-  border-color: #b9c0cc;
-}
-
-.chip--safe {
-  color: #1e7e34;
-}
-
-.chip--bad {
-  color: #c62828;
-}
-
 /* ---------- Risk meter ---------- */
 .meter {
   margin: 4px 0 10px;
