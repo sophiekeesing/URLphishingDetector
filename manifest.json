@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "URL Shield — Phishing Link Checker",
+  "version": "1.0.0",
+  "description": "Checks a URL against a simulated threat list and a handful of heuristics to flag likely phishing links. Prototype/demo only — not a live security product.",
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "Check a URL for phishing signs",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": ["activeTab"]
+}

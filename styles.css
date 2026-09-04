@@ -1,0 +1,247 @@
+/* ---------- Reset & base ---------- */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 24px;
+  background: #eef1f5;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- Popup shell ---------- */
+.popup {
+  width: 360px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(20, 30, 50, 0.12);
+  padding: 18px;
+}
+
+.popup__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.popup__logo {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.popup__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a1f2b;
+}
+
+.popup__subtitle {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* ---------- Input + button ---------- */
+.checker {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+#url-input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #d7dbe3;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #1a1f2b;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+#url-input:focus {
+  border-color: #4f7cff;
+  box-shadow: 0 0 0 3px rgba(79, 124, 255, 0.15);
+}
+
+#check-btn {
+  padding: 10px 16px;
+  background: #4f7cff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  white-space: nowrap;
+}
+
+#check-btn:hover {
+  background: #3d67e6;
+}
+
+#check-btn:active {
+  background: #2f57cf;
+}
+
+.use-tab-btn {
+  display: block;
+  width: 100%;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  background: #f0f3ff;
+  color: #3d5fd6;
+  border: 1px dashed #b9c6ff;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.use-tab-btn:hover {
+  background: #e4e9ff;
+}
+
+/* ---------- Result panel ---------- */
+.result {
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 16px;
+  border: 1px solid transparent;
+}
+
+.result__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.result__message {
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #2b2f38;
+}
+
+.result__reasons {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: #3c4250;
+  line-height: 1.6;
+}
+
+.result__reasons:empty {
+  display: none;
+}
+
+/* Safe */
+.result--safe {
+  background: #e9f8ee;
+  border-color: #bfe8cc;
+}
+.result--safe .result__badge {
+  background: #1e7e34;
+  color: #fff;
+}
+
+/* Suspicious */
+.result--suspicious {
+  background: #fff8e1;
+  border-color: #f3dd9c;
+}
+.result--suspicious .result__badge {
+  background: #b58a00;
+  color: #fff;
+}
+
+/* Dangerous */
+.result--dangerous {
+  background: #fdecec;
+  border-color: #f3b8b8;
+}
+.result--dangerous .result__badge {
+  background: #c62828;
+  color: #fff;
+}
+
+/* Error / unparseable input */
+.result--error {
+  background: #f1f2f5;
+  border-color: #dcdfe6;
+}
+.result--error .result__badge {
+  background: #5b6472;
+  color: #fff;
+}
+
+/* ---------- Examples ---------- */
+.examples__title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.examples__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  border: 1px solid #d7dbe3;
+  background: #f7f8fa;
+  color: #333;
+  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.chip:hover {
+  background: #eef1f5;
+  border-color: #b9c0cc;
+}
+
+.chip--safe {
+  color: #1e7e34;
+}
+
+.chip--bad {
+  color: #c62828;
+}
+
+/* ---------- Footer ---------- */
+.popup__footer {
+  margin-top: 16px;
+  padding-top: 10px;
+  border-top: 1px solid #eef0f3;
+  font-size: 10.5px;
+  color: #9aa1ad;
+  text-align: center;
+}
