@@ -24,6 +24,7 @@ counsel review before any commercial or large-scale distribution.
 | Data minimisation | host+path only, query stripped, hostname-only for DNS, 4-byte prefixes, 10-min in-memory cache, no history |
 | Hashing ≠ anonymisation; k-anonymity prefix is the real control | comments in `lib/hash.js`; `PRIVACY.md` |
 | Third-party APIs: DPA needed (Art. 28); no crowd-sharing services | `PRIVACY.md` ("What we never do"); VirusTotal / public urlscan.io deliberately not integrated |
+| Domain age lookup sends registrable domain only, direct to registry (no `rdap.org` intermediary) | `lib/rdap.js`, `PRIVACY.md` §3 |
 | Transparency (Art. 13/14) | `PRIVACY.md`, linked from popup and options |
 | DPIA (Art. 35) | `docs/DPIA-screening.md` — screened out, with re-trigger list |
 | Accountability (Art. 5(2)) | `DETECTION_VERSION` recorded in every verdict; LIA + DPIA screening retained |

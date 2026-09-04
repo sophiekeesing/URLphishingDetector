@@ -15,6 +15,36 @@ you switch them on.
 | **Local detection engine** | on | none |
 | **Google Safe Browsing** | off (opt-in + free API key) | only **4-byte SHA-256 prefixes** of host+path; never the URL, never the query string |
 | **DNS blocklist cross-check** | off (opt-in) | the **hostname only**, to Cloudflare `1.1.1.1` and Quad9 `9.9.9.9` |
+| **Domain age (RDAP)** | off (opt-in, no key) | the **registrable domain only** (`example.com`), to that TLD's own registry |
+
+### Domain age
+
+Free and keyless, via [RDAP](https://www.rfc-editor.org/rfc/rfc7482) —
+the IETF successor to WHOIS. Phishing domains are usually days old; the
+brands they imitate are decades old. It contributes to the score rather
+than giving a yes/no answer:
+
+| Age | Points |
+| --- | --- |
+| under 7 days | +42 |
+| under 30 days | +32 |
+| under 90 days | +20 |
+| under 180 days | +10 |
+| over 2 years | −12 credit |
+
+The credit is **discarded whenever the address is impersonating a
+brand**, because attackers buy aged domains too — a real case:
+`instogram.com` was registered in 2011, so without that rule its age
+would have pulled it back under the danger threshold.
+
+The extension queries each registry **directly** from a bundled endpoint
+map ([lib/rdap.js](lib/rdap.js)) rather than going through the
+`rdap.org` bootstrap redirector — that keeps host permissions tight and
+avoids an intermediary seeing the lookups. Coverage is partial:
+`.com`, `.net`, `.org`, `.info`, `.xyz`, `.top`, `.online`, `.shop`,
+`.uk` and others are supported; TLDs with no public RDAP (`.lv`, `.de`,
+`.io`, `.co`, `.ru`, `.eu`) are reported as unavailable and **never
+count against a site**.
 
 ### The local engine
 
@@ -101,6 +131,7 @@ lib/similarity.js     Damerau-Levenshtein + confusable-character folding
 lib/punycode.js       decodes xn-- labels to spot IDN homographs
 lib/canonicalize.js   URL -> host/path expressions, query stripped
 lib/hash.js           SHA-256 + 4-byte prefix for the k-anonymity lookup
-lib/reputation.js     Safe Browsing (hash-prefix) + DNS blocklist
+lib/rdap.js           TLD -> registry endpoint map, domain-age scoring
+lib/reputation.js     Safe Browsing + DNS blocklist + domain age
 lib/verdict.js        score thresholds -> one verdict
 ```
