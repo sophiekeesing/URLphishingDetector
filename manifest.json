@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
   "name": "URL Shield — Phishing Link Checker",
-  "version": "1.0.0",
-  "description": "Checks a URL against a simulated threat list and a handful of heuristics to flag likely phishing links. Prototype/demo only — not a live security product.",
+  "version": "2.0.0",
+  "description": "Checks the page you're on (and any link you paste) against Google Safe Browsing, a DNS threat blocklist, and local phishing heuristics.",
   "action": {
     "default_popup": "index.html",
-    "default_title": "Check a URL for phishing signs",
+    "default_title": "URL Shield",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -17,5 +17,15 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["activeTab"]
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "options_page": "options.html",
+  "permissions": ["tabs", "storage"],
+  "host_permissions": [
+    "https://safebrowsing.googleapis.com/*",
+    "https://cloudflare-dns.com/*",
+    "https://dns.quad9.net/*"
+  ]
 }
