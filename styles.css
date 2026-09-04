@@ -236,6 +236,52 @@ body {
   color: #c62828;
 }
 
+/* ---------- Risk meter ---------- */
+.meter {
+  margin: 4px 0 10px;
+}
+
+.meter__track {
+  position: relative;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.09);
+  overflow: hidden;
+}
+
+.meter__fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: #1e7e34;
+  transition: width 0.25s ease, background 0.25s ease;
+}
+
+.result--suspicious .meter__fill {
+  background: #b58a00;
+}
+
+.result--dangerous .meter__fill {
+  background: #c62828;
+}
+
+/* Threshold markers, positioned from JS so they always match the
+   thresholds the engine actually uses. */
+.meter__tick {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.meter__caption {
+  margin-top: 4px;
+  font-size: 10.5px;
+  color: #6b7280;
+  text-align: right;
+}
+
 /* ---------- Per-source breakdown ---------- */
 .result__sources {
   list-style: none;
