@@ -7,7 +7,12 @@
 // the UI is still demonstrable.
 // ---------------------------------------------------------------------
 
-import { evaluate, VERDICT_CONTENT } from "./lib/verdict.js";
+import {
+  evaluate,
+  VERDICT_CONTENT,
+  SUSPICIOUS_AT,
+  DANGEROUS_AT,
+} from "./lib/verdict.js";
 import { DETECTION_VERSION, FALSE_POSITIVE_CONTACT } from "./lib/config.js";
 
 const isExtensionContext =
@@ -28,15 +33,24 @@ const enableCloudLink = document.getElementById("enable-cloud-link");
 const modeNote = document.getElementById("mode-note");
 const versionEl = document.getElementById("detection-version");
 const reportFpLink = document.getElementById("report-fp-link");
+const meterEl = document.getElementById("meter");
+const meterFill = document.getElementById("meter-fill");
+const meterScore = document.getElementById("meter-score");
 
 versionEl.textContent = `Logic v${DETECTION_VERSION}`;
 
+// Place the threshold ticks so the meter explains its own bands.
+document.getElementById("tick-sus").style.left = `${SUSPICIOUS_AT}%`;
+document.getElementById("tick-dan").style.left = `${DANGEROUS_AT}%`;
+
 const EXAMPLE_URLS = [
   { url: "https://www.wikipedia.org", kind: "safe" },
-  { url: "https://github.com", kind: "safe" },
+  { url: "https://mail.google.com", kind: "safe" },
+  { url: "https://instogram.com", kind: "bad" }, // one-letter misspelling
+  { url: "https://micros0ft.com", kind: "bad" }, // digit for a letter
+  { url: "https://xn--pple-43d.com", kind: "bad" }, // Cyrillic homograph
+  { url: "https://paypal.com.secure-billing.ru", kind: "bad" }, // brand in subdomain
   { url: "http://192.168.12.44/login", kind: "bad" },
-  { url: "http://paypa1-login.com", kind: "bad" },
-  { url: "http://secure-appleid.top", kind: "bad" },
 ];
 
 const SOURCE_STATE = {
@@ -74,7 +88,7 @@ function setBusy(busy) {
   checkBtn.textContent = busy ? "Checking…" : "Check";
 }
 
-function renderResult({ status, reasons, sources, cloud }) {
+function renderResult({ status, reasons, sources, cloud, score }) {
   const content = VERDICT_CONTENT[status] || VERDICT_CONTENT.error;
 
   resultPanel.hidden = false;
@@ -82,6 +96,15 @@ function renderResult({ status, reasons, sources, cloud }) {
   resultIcon.textContent = content.icon;
   resultLabel.textContent = content.label;
   resultMessage.textContent = content.message;
+
+  // Risk meter
+  if (status === "error") {
+    meterEl.hidden = true;
+  } else {
+    meterEl.hidden = false;
+    meterFill.style.width = `${Math.max(2, score)}%`;
+    meterScore.textContent = score;
+  }
 
   resultReasons.innerHTML = "";
   (reasons || []).forEach((reason) => {
