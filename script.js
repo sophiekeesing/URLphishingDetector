@@ -26,7 +26,6 @@ const resultLabel = document.getElementById("result-label");
 const resultMessage = document.getElementById("result-message");
 const resultReasons = document.getElementById("result-reasons");
 const sourcesEl = document.getElementById("result-sources");
-const chipsContainer = document.getElementById("example-chips");
 const useTabBtn = document.getElementById("use-tab-btn");
 const cloudOffNote = document.getElementById("cloud-off-note");
 const enableCloudLink = document.getElementById("enable-cloud-link");
@@ -42,16 +41,6 @@ versionEl.textContent = `Logic v${DETECTION_VERSION}`;
 // Place the threshold ticks so the meter explains its own bands.
 document.getElementById("tick-sus").style.left = `${SUSPICIOUS_AT}%`;
 document.getElementById("tick-dan").style.left = `${DANGEROUS_AT}%`;
-
-const EXAMPLE_URLS = [
-  { url: "https://www.wikipedia.org", kind: "safe" },
-  { url: "https://mail.google.com", kind: "safe" },
-  { url: "https://instogram.com", kind: "bad" }, // one-letter misspelling
-  { url: "https://micros0ft.com", kind: "bad" }, // digit for a letter
-  { url: "https://xn--pple-43d.com", kind: "bad" }, // Cyrillic homograph
-  { url: "https://paypal.com.secure-billing.ru", kind: "bad" }, // brand in subdomain
-  { url: "http://192.168.12.44/login", kind: "bad" },
-];
 
 const SOURCE_STATE = {
   clear: { icon: "✔", text: "clear", cls: "src--clear" },
@@ -141,19 +130,6 @@ function renderResult({ status, reasons, sources, cloud, score }) {
   // Nudge to enable online checks, unless they're already on.
   cloudOffNote.hidden = !isExtensionContext || status === "error" || cloud === true;
 }
-
-// Example chips
-EXAMPLE_URLS.forEach(({ url, kind }) => {
-  const chip = document.createElement("button");
-  chip.type = "button";
-  chip.className = `chip chip--${kind}`;
-  chip.textContent = url;
-  chip.addEventListener("click", () => {
-    inputEl.value = url;
-    runCheck(url);
-  });
-  chipsContainer.appendChild(chip);
-});
 
 checkBtn.addEventListener("click", () => runCheck());
 inputEl.addEventListener("keydown", (e) => {
