@@ -28,12 +28,16 @@
       <button id="check-btn" type="button">Check</button>
     </section>
 
-    <!-- Only shown when running as an installed extension popup -->
     <button id="use-tab-btn" class="use-tab-btn" type="button" hidden>
       📍 Re-check this tab
     </button>
 
-    <!-- Result panel: hidden until the first check runs -->
+    <!-- Shown when no cloud check is enabled -->
+    <p id="cloud-off-note" class="cloud-note" hidden>
+      Local checks only.
+      <a id="enable-cloud-link" href="#">Turn on online checks →</a>
+    </p>
+
     <section id="result-panel" class="result" hidden>
       <div class="result__badge">
         <span id="result-icon">•</span>
@@ -50,8 +54,10 @@
     </section>
 
     <footer class="popup__footer">
-      <a id="options-link" href="#" hidden>Add a Google Safe Browsing API key →</a>
       <span id="mode-note" hidden></span>
+      <span id="detection-version"></span>
+      <a id="report-fp-link" href="#" target="_blank" rel="noopener" hidden>Report a false positive</a>
+      <a id="privacy-link" href="PRIVACY.md" target="_blank" rel="noopener">Privacy</a>
     </footer>
   </main>
 

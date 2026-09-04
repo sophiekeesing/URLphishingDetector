@@ -3,41 +3,100 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>URL Shield — Settings</title>
+  <title>URL Shield — Settings &amp; Privacy</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="options-body">
   <main class="options">
-    <h1 class="options__title">🛡️ URL Shield settings</h1>
+    <h1 class="options__title">🛡️ URL Shield — settings &amp; privacy</h1>
 
     <p class="options__intro">
-      URL Shield works out of the box using a public DNS threat blocklist
-      (Quad9) plus local heuristics. Adding a free
-      <strong>Google Safe Browsing API key</strong> turns on the same
-      phishing/malware list that Chrome itself uses.
+      By default URL Shield checks pages <strong>only on your device</strong>
+      (address heuristics + a small bundled blocklist) and scans a page
+      <strong>only when you click the icon</strong>. Nothing about your
+      browsing leaves your computer.
+    </p>
+    <p class="options__intro">
+      The options below are <strong>off until you switch them on</strong>.
+      Turning one on is your consent for that specific processing
+      (GDPR Art. 6(1)(a)); you can withdraw it at any time and the
+      on-device checks keep working. Full detail in the
+      <a href="PRIVACY.md" target="_blank" rel="noopener">privacy policy</a>.
     </p>
 
-    <ol class="options__steps">
-      <li>Open the <a href="https://console.cloud.google.com/apis/library/safebrowsing.googleapis.com" target="_blank" rel="noopener">Safe Browsing API</a> page in Google Cloud Console and click <em>Enable</em>.</li>
-      <li>Go to <em>APIs &amp; Services → Credentials</em> and create an <em>API key</em>.</li>
-      <li>Paste the key below and save.</li>
-    </ol>
+    <!-- Safe Browsing ------------------------------------------------->
+    <section class="opt-card">
+      <label class="opt-card__head">
+        <input type="checkbox" id="sb-toggle" />
+        <span><strong>Google Safe Browsing check</strong></span>
+      </label>
+      <p class="opt-card__body">
+        Sends only <strong>4-byte hashed fragments</strong> of the page's
+        host and path to <code>safebrowsing.googleapis.com</code> — never
+        the address itself, and never the query string. Google returns a
+        bucket of candidates; the exact match is finished on your device.
+        Requires a free API key.
+      </p>
+      <ol class="opt-card__steps">
+        <li>Enable the <a href="https://console.cloud.google.com/apis/library/safebrowsing.googleapis.com" target="_blank" rel="noopener">Safe Browsing API</a> in Google Cloud Console.</li>
+        <li>Create an API key under <em>APIs &amp; Services → Credentials</em>.</li>
+      </ol>
+      <div class="opt-card__row">
+        <input id="api-key" type="password" placeholder="AIza…" autocomplete="off" spellcheck="false" />
+        <button id="toggle-key" type="button" class="ghost-btn" title="Show / hide">👁</button>
+        <button id="save-key" type="button">Save key</button>
+        <button id="test-key" type="button" class="ghost-btn">Test</button>
+      </div>
+      <span id="sb-status" class="options__status" role="status"></span>
+    </section>
 
-    <label for="api-key" class="options__label">Google Safe Browsing API key</label>
-    <div class="options__row">
-      <input id="api-key" type="password" placeholder="AIza…" autocomplete="off" spellcheck="false" />
-      <button id="toggle-key" type="button" class="ghost-btn" title="Show / hide">👁</button>
-    </div>
+    <!-- DNS blocklist ---------------------------------------------->
+    <section class="opt-card">
+      <label class="opt-card__head">
+        <input type="checkbox" id="dns-toggle" />
+        <span><strong>DNS blocklist cross-check</strong></span>
+      </label>
+      <p class="opt-card__body">
+        Sends the <strong>hostname only</strong> (not the path or query)
+        to two public DNS-over-HTTPS resolvers —
+        <code>cloudflare-dns.com</code> and <code>dns.quad9.net</code> —
+        and compares their answers. These resolvers are independent
+        controllers with their own privacy policies
+        (<a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare</a>,
+        <a href="https://quad9.net/privacy/policy/" target="_blank" rel="noopener">Quad9</a>).
+      </p>
+      <span id="dns-status" class="options__status" role="status"></span>
+    </section>
+
+    <!-- Auto scan ------------------------------------------------->
+    <section class="opt-card">
+      <label class="opt-card__head">
+        <input type="checkbox" id="auto-toggle" />
+        <span><strong>Scan pages automatically as I browse</strong></span>
+      </label>
+      <p class="opt-card__body">
+        Shows a verdict on the toolbar badge for every page without
+        clicking. This needs the <code>tabs</code> permission (the
+        browser will ask). Leaving it off keeps URL Shield strictly
+        scan-on-demand.
+      </p>
+      <span id="auto-status" class="options__status" role="status"></span>
+    </section>
 
     <div class="options__actions">
-      <button id="save-btn" type="button">Save</button>
-      <button id="test-btn" type="button" class="ghost-btn">Test key</button>
-      <span id="status" class="options__status" role="status"></span>
+      <button id="withdraw" type="button" class="ghost-btn">Turn everything off &amp; revoke permissions</button>
     </div>
 
     <p class="options__note">
-      The key is stored with <code>chrome.storage.sync</code> and is sent
-      only to <code>safebrowsing.googleapis.com</code>.
+      Stored with <code>chrome.storage.sync</code>: your settings and API
+      key only. No browsing history, no analytics, no telemetry. A
+      10-minute in-memory cache of recent verdicts is kept to avoid
+      repeat lookups and is cleared when the service worker stops.
+    </p>
+    <p class="options__note">
+      <a href="PRIVACY.md" target="_blank" rel="noopener">Privacy policy</a> ·
+      <a href="TERMS.md" target="_blank" rel="noopener">Terms &amp; disclaimer</a> ·
+      <a href="SECURITY.md" target="_blank" rel="noopener">Report a security issue</a>
     </p>
   </main>
 
