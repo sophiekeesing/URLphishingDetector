@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>URL Shield — Phishing Link Checker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="popup">
+    <header class="popup__header">
+      <span class="popup__logo">🛡️</span>
+      <div>
+        <h1 class="popup__title">URL Shield</h1>
+        <p class="popup__subtitle">Paste a link to check if it's safe</p>
+      </div>
+    </header>
+
+    <section class="checker">
+      <label for="url-input" class="visually-hidden">URL to check</label>
+      <input
+        id="url-input"
+        type="text"
+        placeholder="e.g. https://example.com"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button id="check-btn" type="button">Check</button>
+    </section>
+
+    <!-- Only shown when running as an installed extension popup, since
+         chrome.tabs is unavailable when this page is opened as a plain file -->
+    <button id="use-tab-btn" class="use-tab-btn" type="button" hidden>
+      📍 Check this tab's URL instead
+    </button>
+
+    <!-- Result panel: hidden until the first check runs -->
+    <section id="result-panel" class="result" hidden>
+      <div class="result__badge" id="result-badge">
+        <span id="result-icon">•</span>
+        <span id="result-label">—</span>
+      </div>
+      <p class="result__message" id="result-message"></p>
+      <ul class="result__reasons" id="result-reasons"></ul>
+    </section>
+
+    <section class="examples">
+      <p class="examples__title">Try an example:</p>
+      <div class="examples__chips" id="example-chips">
+        <!-- Populated by script.js, but listed here for reference:
+             https://www.wikipedia.org (safe)
+             https://github.com (safe)
+             http://192.168.12.44/login (dangerous - IP address)
+             http://paypa1-login.com (dangerous - typosquat)
+             http://secure-appleid.top (suspicious - odd TLD) -->
+      </div>
+    </section>
+
+    <footer class="popup__footer">
+      Prototype demo — not connected to a live threat feed.
+    </footer>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
