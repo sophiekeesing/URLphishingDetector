@@ -70,43 +70,73 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 // --- Optional "scan as I browse" -------------------------------
 const CHECKABLE = /^https?:\/\//i;
 
+const TITLES = {
+  safe: "URL Shield: no threats detected",
+  suspicious: "URL Shield: this page looks suspicious",
+  dangerous: "URL Shield: this page is likely phishing",
+  error: "URL Shield",
+};
+
+// The URL we are currently rendering a badge for, per tab. A cloud
+// lookup can take seconds, and by then the user may have navigated on —
+// without this guard a slow verdict would land on whatever page is open
+// now, labelling an innocent page as phishing (or vice versa).
+const inFlight = new Map(); // tabId -> url
+
+// Badge writes race against the tab closing, which makes Chrome reject
+// (and in some cases throw synchronously). Both are expected here, so
+// the call itself goes inside the guard rather than being passed in
+// already-invoked.
+async function safe(fn) {
+  try {
+    await fn();
+  } catch {
+    /* tab closed before the badge could be written */
+  }
+}
+
 async function updateBadgeForTab(tabId, url) {
   if (!url || !CHECKABLE.test(url)) {
-    await safe(chrome.action.setBadgeText({ tabId, text: "" }));
-    await safe(chrome.action.setTitle({ tabId, title: "URL Shield" }));
+    inFlight.delete(tabId);
+    await safe(() => chrome.action.setBadgeText({ tabId, text: "" }));
+    await safe(() => chrome.action.setTitle({ tabId, title: TITLES.error }));
     return;
   }
+
+  inFlight.set(tabId, url);
   const { status } = await assessUrl(url);
+
+  // Navigated away (or the tab closed) while we were checking — drop
+  // this result instead of showing it against the wrong page.
+  if (inFlight.get(tabId) !== url) return;
+  inFlight.delete(tabId);
+
   const badge = BADGE[status] || BADGE.error;
-  await safe(chrome.action.setBadgeBackgroundColor({ tabId, color: badge.color }));
-  await safe(chrome.action.setBadgeText({ tabId, text: badge.text }));
-  const titles = {
-    safe: "URL Shield: no threats detected",
-    suspicious: "URL Shield: this page looks suspicious",
-    dangerous: "URL Shield: this page is likely phishing",
-    error: "URL Shield",
-  };
-  await safe(chrome.action.setTitle({ tabId, title: titles[status] || "URL Shield" }));
+  await safe(() => chrome.action.setBadgeBackgroundColor({ tabId, color: badge.color }));
+  await safe(() => chrome.action.setBadgeText({ tabId, text: badge.text }));
+  await safe(() => chrome.action.setTitle({ tabId, title: TITLES[status] || TITLES.error }));
 }
 
-function safe(promise) {
-  return Promise.resolve(promise).catch(() => {});
-}
-
+// Both listeners fire and forget, so each needs its own catch —
+// an async function's rejection is not caught by the caller's
+// try/catch once the call is not awaited.
 function onTabUpdated(tabId, changeInfo, tab) {
   if (changeInfo.status === "complete" || changeInfo.url) {
-    updateBadgeForTab(tabId, changeInfo.url || tab.url);
+    updateBadgeForTab(tabId, changeInfo.url || tab.url).catch(() => {});
   }
 }
 
 async function onTabActivated({ tabId }) {
   try {
     const tab = await chrome.tabs.get(tabId);
-    updateBadgeForTab(tabId, tab.url);
+    await updateBadgeForTab(tabId, tab.url);
   } catch {
-    /* tab gone */
+    /* tab gone before we could read or badge it */
   }
 }
+
+// Don't let the map grow for the life of the worker.
+chrome.tabs.onRemoved.addListener((tabId) => inFlight.delete(tabId));
 
 // Attach/detach the navigation listeners based on the setting + the
 // "tabs" permission actually being granted.
@@ -123,9 +153,12 @@ async function syncAutoScan() {
     chrome.tabs.onActivated.addListener(onTabActivated);
   } else {
     // Make sure no stale badge is left behind.
+    inFlight.clear();
     try {
       const tabs = await chrome.tabs.query({});
-      for (const t of tabs) safe(chrome.action.setBadgeText({ tabId: t.id, text: "" }));
+      await Promise.all(
+        tabs.map((t) => safe(() => chrome.action.setBadgeText({ tabId: t.id, text: "" })))
+      );
     } catch {
       /* no tabs permission — nothing to clear */
     }
