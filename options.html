@@ -68,6 +68,33 @@
       <span id="dns-status" class="options__status" role="status"></span>
     </section>
 
+    <!-- Domain age ------------------------------------------------->
+    <section class="opt-card">
+      <label class="opt-card__head">
+        <input type="checkbox" id="age-toggle" />
+        <span><strong>Domain age check</strong></span>
+      </label>
+      <p class="opt-card__body">
+        Looks up when the domain was first registered, using the public
+        <strong>RDAP</strong> service each registry runs (the official
+        replacement for WHOIS — free, no account). Phishing domains are
+        usually days old; the sites they imitate are years old, so this
+        catches imitations of brands the built-in list has never heard of.
+      </p>
+      <p class="opt-card__body">
+        Sends only the <strong>registrable domain</strong>
+        (<code>example.com</code> — not the subdomain, path or query) to
+        that TLD's own registry. Covers <code>.com</code>,
+        <code>.net</code>, <code>.org</code>, <code>.info</code>,
+        <code>.xyz</code>, <code>.top</code>, <code>.online</code>,
+        <code>.shop</code>, <code>.uk</code> and others. Many country
+        domains (<code>.lv</code>, <code>.de</code>, <code>.io</code>)
+        publish no RDAP at all — those are reported as unavailable and
+        never count against a site.
+      </p>
+      <span id="age-status" class="options__status" role="status"></span>
+    </section>
+
     <!-- Auto scan ------------------------------------------------->
     <section class="opt-card">
       <label class="opt-card__head">

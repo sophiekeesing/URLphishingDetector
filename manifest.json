@@ -27,6 +27,16 @@
   "optional_host_permissions": [
     "https://safebrowsing.googleapis.com/*",
     "https://cloudflare-dns.com/*",
-    "https://dns.quad9.net/*"
+    "https://dns.quad9.net/*",
+    "https://rdap.verisign.com/*",
+    "https://tld-rdap.verisign.com/*",
+    "https://rdap.publicinterestregistry.org/*",
+    "https://rdap.identitydigital.services/*",
+    "https://rdap.centralnic.com/*",
+    "https://rdap.zdnsgtld.com/*",
+    "https://rdap.radix.host/*",
+    "https://rdap.gmoregistry.net/*",
+    "https://pubapi.registry.google/*",
+    "https://rdap.nominet.uk/*"
   ]
 }

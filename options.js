@@ -16,6 +16,7 @@ import {
 
 const sbToggle = document.getElementById("sb-toggle");
 const dnsToggle = document.getElementById("dns-toggle");
+const ageToggle = document.getElementById("age-toggle");
 const autoToggle = document.getElementById("auto-toggle");
 const apiKeyInput = document.getElementById("api-key");
 const toggleKeyBtn = document.getElementById("toggle-key");
@@ -25,6 +26,7 @@ const withdrawBtn = document.getElementById("withdraw");
 
 const sbStatus = document.getElementById("sb-status");
 const dnsStatus = document.getElementById("dns-status");
+const ageStatus = document.getElementById("age-status");
 const autoStatus = document.getElementById("auto-status");
 
 function status(el, text, kind = "") {
@@ -37,6 +39,7 @@ async function refresh() {
   const s = await getSettings();
   sbToggle.checked = s.safeBrowsingEnabled;
   dnsToggle.checked = s.dnsCheckEnabled;
+  ageToggle.checked = s.domainAgeEnabled;
   autoToggle.checked = s.autoScanEnabled;
   apiKeyInput.value = s.safeBrowsingApiKey || "";
 
@@ -50,6 +53,7 @@ async function refresh() {
     s.safeBrowsingEnabled && !s.safeBrowsingApiKey ? "err" : ""
   );
   status(dnsStatus, s.dnsCheckEnabled ? "On." : "Off.");
+  status(ageStatus, s.domainAgeEnabled ? "On." : "Off.");
   status(autoStatus, s.autoScanEnabled ? "On." : "Off.");
 }
 refresh();
@@ -89,6 +93,24 @@ dnsToggle.addEventListener("change", async () => {
     await setSettings({ dnsCheckEnabled: false });
     await maybeRevoke();
     status(dnsStatus, "Off.", "");
+  }
+});
+
+// --- Domain age toggle ------------------------------------
+ageToggle.addEventListener("change", async () => {
+  if (ageToggle.checked) {
+    const granted = await chrome.permissions.request({ origins: CLOUD_HOSTS.rdap });
+    if (!granted) {
+      ageToggle.checked = false;
+      status(ageStatus, "Permission denied — check not enabled.", "err");
+      return;
+    }
+    await setSettings({ domainAgeEnabled: true, cloudConsentAt: Date.now() });
+    status(ageStatus, "On.", "ok");
+  } else {
+    await setSettings({ domainAgeEnabled: false });
+    await maybeRevoke();
+    status(ageStatus, "Off.", "");
   }
 });
 
@@ -167,7 +189,7 @@ withdrawBtn.addEventListener("click", async () => {
   });
   await chrome.permissions.remove({
     permissions: ["tabs"],
-    origins: [CLOUD_HOSTS.safeBrowsing, ...CLOUD_HOSTS.dns],
+    origins: [CLOUD_HOSTS.safeBrowsing, ...CLOUD_HOSTS.dns, ...CLOUD_HOSTS.rdap],
   }).catch(() => {});
   await refresh();
   status(sbStatus, "All cloud features off. Local checks still active.", "ok");
@@ -179,6 +201,7 @@ async function maybeRevoke() {
   const origins = [];
   if (!s.safeBrowsingEnabled) origins.push(CLOUD_HOSTS.safeBrowsing);
   if (!s.dnsCheckEnabled) origins.push(...CLOUD_HOSTS.dns);
+  if (!s.domainAgeEnabled) origins.push(...CLOUD_HOSTS.rdap);
   if (origins.length) {
     await chrome.permissions.remove({ origins }).catch(() => {});
   }

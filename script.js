@@ -123,7 +123,11 @@ function renderResult({ status, reasons, sources, cloud, score }) {
         `<span class="src__icon">${meta.icon}</span>` +
         `<span class="src__label"></span>` +
         `<span class="src__state">${meta.text}</span>`;
-      row.querySelector(".src__label").textContent = s.label;
+      // s.detail / s.note are registry-supplied text — assign as text,
+      // never as markup.
+      row.querySelector(".src__label").textContent = s.detail
+        ? `${s.label} — ${s.detail}`
+        : s.label;
       if (s.note) row.title = s.note;
       sourcesEl.appendChild(row);
     });

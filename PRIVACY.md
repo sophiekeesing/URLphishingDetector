@@ -65,7 +65,30 @@ withdraw at any time; the on-device checks keep working.
   <https://quad9.net/privacy/policy/>).
 - **Retention by us:** none beyond the 10-minute in-memory cache.
 
-### 3. "Scan as I browse"
+### 3. Domain age check (RDAP)
+
+- **What is sent:** the **registrable domain only** — `example.com`, not
+  the subdomain, path, query or fragment — to the RDAP service operated
+  by that TLD's own registry (Verisign for `.com`/`.net`, Public
+  Interest Registry for `.org`, CentralNic, Identity Digital, Radix,
+  Nominet, Google Registry, ZDNS, GMO). The full endpoint list is in
+  [`lib/rdap.js`](lib/rdap.js) and matches the host permissions
+  requested.
+- **Why:** phishing domains are typically registered days before use;
+  the brands they imitate are years old. This is also the one check
+  that works on brands absent from the built-in list.
+- **Note on routing:** the extension queries each registry **directly**
+  and deliberately does not use the `rdap.org` bootstrap redirector, so
+  no third-party intermediary sees the lookups.
+- **Recipients:** each domain registry, acting as an independent
+  controller under its own policy. RDAP is a public registration-data
+  service (the IETF successor to WHOIS).
+- **Coverage:** partial. TLDs with no public RDAP (`.lv`, `.de`,
+  `.io`, `.co`, `.ru`, `.eu` and many other country domains) are
+  reported as unavailable and never count against a site.
+- **Retention by us:** none beyond the 10-minute in-memory cache.
+
+### 4. "Scan as I browse"
 
 Enabling this grants the `tabs` permission and lets the extension read
 the URL of pages you navigate to so it can show a badge automatically.
@@ -80,10 +103,10 @@ the permission.
   fingerprinting.
 - No data is sold or shared with anyone other than the recipients named
   above, and only as described.
-- No third party used here (Google Safe Browsing, Cloudflare, Quad9)
-  publishes or crowd-shares the queries URL Shield sends. Services that
-  do (e.g. VirusTotal, urlscan.io public scans) are deliberately **not**
-  integrated.
+- No third party used here (Google Safe Browsing, Cloudflare, Quad9,
+  the domain registries) publishes or crowd-shares the queries URL
+  Shield sends. Services that do (e.g. VirusTotal, urlscan.io public
+  scans) are deliberately **not** integrated.
 
 ## Storage on your device (ePrivacy / § 25 TDDDG)
 
