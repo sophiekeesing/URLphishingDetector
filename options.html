@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>URL Shield — Settings</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="options-body">
+  <main class="options">
+    <h1 class="options__title">🛡️ URL Shield settings</h1>
+
+    <p class="options__intro">
+      URL Shield works out of the box using a public DNS threat blocklist
+      (Quad9) plus local heuristics. Adding a free
+      <strong>Google Safe Browsing API key</strong> turns on the same
+      phishing/malware list that Chrome itself uses.
+    </p>
+
+    <ol class="options__steps">
+      <li>Open the <a href="https://console.cloud.google.com/apis/library/safebrowsing.googleapis.com" target="_blank" rel="noopener">Safe Browsing API</a> page in Google Cloud Console and click <em>Enable</em>.</li>
+      <li>Go to <em>APIs &amp; Services → Credentials</em> and create an <em>API key</em>.</li>
+      <li>Paste the key below and save.</li>
+    </ol>
+
+    <label for="api-key" class="options__label">Google Safe Browsing API key</label>
+    <div class="options__row">
+      <input id="api-key" type="password" placeholder="AIza…" autocomplete="off" spellcheck="false" />
+      <button id="toggle-key" type="button" class="ghost-btn" title="Show / hide">👁</button>
+    </div>
+
+    <div class="options__actions">
+      <button id="save-btn" type="button">Save</button>
+      <button id="test-btn" type="button" class="ghost-btn">Test key</button>
+      <span id="status" class="options__status" role="status"></span>
+    </div>
+
+    <p class="options__note">
+      The key is stored with <code>chrome.storage.sync</code> and is sent
+      only to <code>safebrowsing.googleapis.com</code>.
+    </p>
+  </main>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>
