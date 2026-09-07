@@ -61,7 +61,11 @@ real domains ([lib/brands.js](lib/brands.js)):
 | Brand on a domain it doesn't own | 48 | `instagram.co`, `paypal.net` |
 | Brand + extra words | 46 | `paypal-login-verify.com` |
 | Punycode / IDN homograph | 42 | `xn--pple-43d.com` |
+| IP logger / click tracker | 60 | `grabify.link`, `iplogger.org`, and their innocent-looking custom domains |
+| Open redirect to an impersonator | 55 | `google.com/url?q=https://instogram.com` |
+| Open redirect off-site | 35 | `google.com/url?q=…`, `facebook.com/l.php?u=…` |
 | Raw IP host · credentials in URL | 35 | `192.168.12.44/login`, `user@evil.tk` |
+| Shortened link (destination hidden) | 15 | `bit.ly/…` — noted, not alarming on its own |
 | No HTTPS · odd port | 22 / 12 | `http://…` |
 | Risky TLD | 10–25 | `.tk`, `.zip`, `.top`, `.xyz` |
 | Urgent keywords · deep subdomains · hyphen soup | 10–24 | `secure-login-update…` |
@@ -72,7 +76,32 @@ scales with brand length (≤4 chars: exact match only) to keep short
 names from matching everything.
 
 Domains a brand actually owns are allow-listed first, so
-`login.microsoftonline.com` and `s3.amazonaws.com` score 0.
+`login.microsoftonline.com` and `s3.amazonaws.com` score 0. The logger
+and open-redirect rules are the exception — they deliberately run on
+allow-listed domains too, because "the visible domain really is
+google.com" is exactly what makes an open redirect work.
+
+### Links that hide or harvest
+
+A separate family from brand imitation: the link looks completely
+ordinary and often forwards you to the real site afterwards, so nothing
+seems wrong.
+
+- **IP loggers** (`grabify.link`, `iplogger.org`, plus the harmless-
+  sounding custom domains they hand out) record your IP — and from it a
+  city-level guess at your location — along with your browser, OS,
+  screen size and the time. They **cannot** silently get precise GPS
+  location, camera or microphone; those require the browser's own
+  permission prompt.
+- **Open redirects** start at a domain you trust and hand you off
+  elsewhere. If the destination is itself imitating a brand, the score
+  rises from 35 to 55.
+
+Detection is by URL only — the extension never opens the link, because
+visiting a logger to test it is exactly what you don't want. The
+tradeoff is that a brand-new logger domain on no list, or a custom
+domain quietly running logging scripts, is indistinguishable from an
+ordinary site by its address alone.
 
 Current benchmark ([lib/heuristics.js](lib/heuristics.js)): **30/30**
 phishing patterns flagged, **0/26** false positives on real sites.
@@ -127,6 +156,7 @@ styles.css           shared styles
 lib/config.js        defaults, settings helpers, DETECTION_VERSION
 lib/heuristics.js     the scoring engine (pure functions)
 lib/brands.js         ~150 brands + real domains, keywords, TLD risk, suffixes
+lib/trackers.js       IP loggers, shorteners, open-redirect parameters
 lib/similarity.js     Damerau-Levenshtein + confusable-character folding
 lib/punycode.js       decodes xn-- labels to spot IDN homographs
 lib/canonicalize.js   URL -> host/path expressions, query stripped
