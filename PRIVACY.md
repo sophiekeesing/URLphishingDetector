@@ -56,7 +56,8 @@ withdraw at any time; the on-device checks keep working.
 
 - **What is sent:** the **hostname only** (no path, no query) of the
   current page, to `https://cloudflare-dns.com` and
-  `https://dns.quad9.net` over HTTPS.
+  `https://dns.quad9.net`, as a standard encrypted DNS-over-HTTPS query
+  (RFC 8484 wireformat).
 - **Why:** Quad9 refuses to resolve domains on its malware/phishing
   feeds; Cloudflare does not filter. Disagreement is a strong signal.
 - **Recipients:** Cloudflare, Inc. and the Quad9 Foundation, each an
