@@ -131,6 +131,7 @@ lib/similarity.js     Damerau-Levenshtein + confusable-character folding
 lib/punycode.js       decodes xn-- labels to spot IDN homographs
 lib/canonicalize.js   URL -> host/path expressions, query stripped
 lib/hash.js           SHA-256 + 4-byte prefix for the k-anonymity lookup
+lib/dns.js            RFC 8484 wireformat DoH client (Quad9 rejects JSON)
 lib/rdap.js           TLD -> registry endpoint map, domain-age scoring
 lib/reputation.js     Safe Browsing + DNS blocklist + domain age
 lib/verdict.js        score thresholds -> one verdict
