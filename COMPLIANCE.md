@@ -20,7 +20,8 @@ counsel review before any commercial or large-scale distribution.
 | --- | --- |
 | URLs treated as personal data | `PRIVACY.md`, `docs/LIA.md` |
 | Lawful basis: legitimate interest for local scan | `docs/LIA.md` (documented balancing test) |
-| Lawful basis: consent for optional cloud lookups, tool still works if withdrawn | `options.js` toggles + `cloudConsentAt`; `background.js` runs local-only when `cloudEnabled()` is false |
+| Lawful basis: legitimate interest for the network lookups, which are ON by default | `docs/LIA.md`; options page opens on first install; every lookup has an opt-out and `background.js` runs local-only when `cloudEnabled()` is false |
+| Right to object (Art. 21) | Per-lookup switches + "Turn everything off" in `options.js` |
 | Data minimisation | host+path only, query stripped, hostname-only for DNS, 4-byte prefixes, 10-min in-memory cache, no history |
 | Hashing ≠ anonymisation; k-anonymity prefix is the real control | comments in `lib/hash.js`; `PRIVACY.md` |
 | Third-party APIs: DPA needed (Art. 28); no crowd-sharing services | `PRIVACY.md` ("What we never do"); VirusTotal / public urlscan.io deliberately not integrated |

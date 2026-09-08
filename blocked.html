@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blocked by URL Shield</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="blocked-body">
+  <main class="blocked">
+    <div class="blocked__icon">⛔</div>
+    <h1 class="blocked__title">This link was stopped before it loaded</h1>
+    <p class="blocked__lead" id="lead"></p>
+
+    <div class="blocked__url">
+      <span class="blocked__url-label">Link</span>
+      <code id="target-url"></code>
+    </div>
+
+    <ul class="blocked__reasons" id="reasons"></ul>
+
+    <div class="blocked__actions">
+      <button id="back-btn" type="button" class="blocked__btn blocked__btn--safe">
+        ← Back to safety
+      </button>
+      <button id="continue-btn" type="button" class="blocked__btn blocked__btn--risk">
+        Continue anyway
+      </button>
+    </div>
+
+    <p class="blocked__note" id="note"></p>
+    <p class="blocked__footer">
+      <span id="version"></span>
+      <a id="fp-link" href="#" target="_blank" rel="noopener">Report a false positive</a>
+      <a href="options.html">Settings</a>
+    </p>
+  </main>
+
+  <script type="module" src="blocked.js"></script>
+</body>
+</html>

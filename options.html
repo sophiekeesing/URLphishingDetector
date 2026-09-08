@@ -11,16 +11,18 @@
     <h1 class="options__title">🛡️ URL Shield — settings &amp; privacy</h1>
 
     <p class="options__intro">
-      By default URL Shield checks pages <strong>only on your device</strong>
-      (address heuristics + a small bundled blocklist) and scans a page
-      <strong>only when you click the icon</strong>. Nothing about your
-      browsing leaves your computer.
+      URL Shield checks every page you open. Most of that happens
+      <strong>on your device</strong>. The three lookups below are
+      <strong>already on</strong>, because protection you have to switch
+      on protects almost nobody — but each sends a small amount of data
+      to a third party, so here is exactly what, and how to turn any of
+      them off.
     </p>
     <p class="options__intro">
-      The options below are <strong>off until you switch them on</strong>.
-      Turning one on is your consent for that specific processing
-      (GDPR Art. 6(1)(a)); you can withdraw it at any time and the
-      on-device checks keep working. Full detail in the
+      They run on the legitimate interest in security
+      (GDPR Art. 6(1)(f), Recital 49). <strong>Every one can be turned
+      off</strong> and the on-device checks keep working without them.
+      Full detail in the
       <a href="PRIVACY.md" target="_blank" rel="noopener">privacy policy</a>.
     </p>
 
@@ -93,6 +95,29 @@
         never count against a site.
       </p>
       <span id="age-status" class="options__status" role="status"></span>
+    </section>
+
+    <!-- Blocking ------------------------------------------------->
+    <section class="opt-card opt-card--feature">
+      <label class="opt-card__head">
+        <input type="checkbox" id="block-toggle" />
+        <span><strong>Stop dangerous pages before they load</strong></span>
+      </label>
+      <p class="opt-card__body">
+        Shows a warning page instead of loading anything, with a
+        <em>Continue anyway</em> button if you disagree. This is the only
+        setting that helps against <strong>link trackers</strong>
+        (Grabify, IPLogger and the like): those record your IP address,
+        rough location and device the moment the request is sent, so a
+        warning that arrives after the page loads is already too late.
+      </p>
+      <p class="opt-card__body">
+        Needs permission to see the addresses you navigate to
+        (<code>webNavigation</code> on all sites) — the browser will ask.
+        Nothing about your browsing is stored or sent; the decision is
+        made on your device from the address alone.
+      </p>
+      <span id="block-status" class="options__status" role="status"></span>
     </section>
 
     <!-- Auto scan ------------------------------------------------->
