@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Stopped by chick-check</title>
+  <title>chick-check — link report</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="sheet-body">
-  <main class="sheet sheet--danger">
+  <main class="sheet" id="sheet">
     <div class="sheet__brand">
       <img src="icons/logo.png" alt="chick-check" />
     </div>
 
-    <h1 class="sheet__title" id="sheet-title">This link was stopped before it loaded</h1>
+    <h1 class="sheet__title" id="title">Link report</h1>
     <p class="sheet__lead" id="lead"></p>
 
     <div class="sheet__url">
@@ -20,18 +20,13 @@
       <code id="target-url"></code>
     </div>
 
-    <ul class="sheet__reasons" id="reasons"></ul>
-
-    <div class="sheet__actions">
-      <button id="back-btn" type="button" class="sheet__btn sheet__btn--safe">
-        ← Back to safety
-      </button>
-      <button id="continue-btn" type="button" class="sheet__btn sheet__btn--risk">
-        Continue anyway
-      </button>
+    <div class="meter" id="meter">
+      <div class="meter__track"><div class="meter__fill" id="meter-fill"></div></div>
+      <div class="meter__caption"><span id="meter-score">0</span>/100 risk score</div>
     </div>
 
-    <p class="sheet__note" id="note"></p>
+    <ul class="sheet__reasons" id="reasons"></ul>
+
     <p class="sheet__footer">
       <span id="version"></span>
       <a id="fp-link" href="#" target="_blank" rel="noopener">Report a false positive</a>
@@ -39,6 +34,6 @@
     </p>
   </main>
 
-  <script type="module" src="blocked.js"></script>
+  <script type="module" src="result.js"></script>
 </body>
 </html>

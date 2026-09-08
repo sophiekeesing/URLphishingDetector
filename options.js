@@ -156,7 +156,7 @@ testKeyBtn.addEventListener("click", async () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          client: { clientId: "url-shield", clientVersion: "3.0.0" },
+          client: { clientId: "chick-check", clientVersion: "6.0.0" },
           clientStates: [],
           threatInfo: {
             threatTypes: ["SOCIAL_ENGINEERING", "MALWARE"],

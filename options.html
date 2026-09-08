@@ -3,15 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>URL Shield — Settings &amp; Privacy</title>
+  <title>chick-check — settings</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="options-body">
   <main class="options">
-    <h1 class="options__title">🛡️ URL Shield — settings &amp; privacy</h1>
+    <div class="options__brand">
+      <img src="icons/logo.png" alt="chick-check" />
+      <span>settings &amp; privacy</span>
+    </div>
 
     <p class="options__intro">
-      URL Shield checks every page you open. Most of that happens
+      chick-check checks every page you open. Most of that happens
       <strong>on your device</strong>. The three lookups below are
       <strong>already on</strong>, because protection you have to switch
       on protects almost nobody — but each sends a small amount of data
@@ -142,12 +145,25 @@
         <span><strong>Scan pages automatically as I browse</strong></span>
       </label>
       <p class="opt-card__body">
-        Shows a verdict on the toolbar badge for every page without
-        clicking. This needs the <code>tabs</code> permission (the
-        browser will ask). Leaving it off keeps URL Shield strictly
-        scan-on-demand.
+        Shows a verdict on the toolbar badge for every page as you open
+        it. Turn it off to keep chick-check strictly on-demand — the
+        popup and the right-click check still work.
       </p>
       <span id="auto-status" class="options__status" role="status"></span>
+    </section>
+
+    <!-- Right-click check (no setting, just discoverability) ----->
+    <section class="opt-card">
+      <label class="opt-card__head" style="cursor:default">
+        <span><strong>Right-click any link to check it</strong></span>
+      </label>
+      <p class="opt-card__body">
+        Right-click a link (or select an address and right-click) and
+        pick <em>Check this link with chick-check</em>. The verdict
+        appears as a card on the page — so you can check a link
+        <strong>before</strong> you click it, which is the only moment
+        that helps against a tracker. Always on; nothing to configure.
+      </p>
     </section>
 
     <div class="options__actions">

@@ -1,4 +1,4 @@
-# URL Shield — Phishing Link Checker
+# chick-check
 
 A Manifest V3 browser extension that warns you about likely phishing
 pages, IP-logger links and disguised redirects — and, if you switch that
@@ -23,6 +23,26 @@ URL or the query string), and every one can be turned off.
 All the network lookups can be switched off individually, and the
 extension still works with every one of them off. See
 [PRIVACY.md](PRIVACY.md).
+
+## Right-click any link to check it
+
+The answer you want is usually needed **before** you click, not after.
+Right-click a link — or select an address anywhere and right-click — and
+choose **Check this link with chick-check**.
+
+The verdict appears as a card in the corner of the page you are already
+on, so you never leave it. Selected text is accepted without a scheme,
+so highlighting `paypa1-login.com` in an email works.
+
+The card is rendered inside a **closed shadow root**: the host page
+cannot restyle a security warning to look harmless, and its scripts
+cannot read the result out of the DOM. If a page refuses injection at
+all — `chrome://` pages, the web store, PDFs — the verdict opens in an
+ordinary tab instead, so the answer is never simply lost.
+
+Nothing is fetched from the link to produce this. The verdict comes from
+the address alone, which is the entire point: fetching a tracker to see
+where it goes is the thing that records you.
 
 ## Blocking dangerous pages
 
@@ -204,9 +224,10 @@ mandatory obligations.
 
 ```
 manifest.json         MV3 manifest
-background.js         service worker: verdicts, badge, pre-load blocking
+background.js         service worker: verdicts, badge, blocking, context menu
 index.html / script.js   popup UI + controller
 blocked.html / blocked.js  the pre-load warning page
+result.html / result.js    verdict page, used when a page refuses injection
 options.html / options.js  settings + opt-outs
 styles.css           shared styles
 lib/config.js        defaults, settings helpers, DETECTION_VERSION

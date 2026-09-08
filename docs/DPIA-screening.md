@@ -2,7 +2,7 @@
 
 A full Data Protection Impact Assessment (GDPR Art. 35) is required when
 processing is "likely to result in a high risk" to individuals. This
-screening records why URL Shield, as designed, does **not** meet that
+screening records why chick-check, as designed, does **not** meet that
 threshold — and what would change that.
 
 ## Screening against the Art. 35(3) / EDPB criteria

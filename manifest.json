@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "URL Shield — Phishing Link Checker",
-  "version": "5.0.0",
-  "description": "Blocks likely phishing pages, IP-logger links and disguised redirects before they load, using local checks plus Safe Browsing, DNS and domain-age lookups.",
+  "name": "chick-check",
+  "version": "6.0.0",
+  "description": "We help you keep your data only yours and nobody else's. Checks links for phishing, IP loggers and disguised redirects — before they load.",
   "action": {
     "default_popup": "index.html",
-    "default_title": "URL Shield",
+    "default_title": "chick-check",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -22,7 +22,7 @@
     "type": "module"
   },
   "options_page": "options.html",
-  "permissions": ["activeTab", "storage", "tabs"],
+  "permissions": ["activeTab", "storage", "tabs", "contextMenus", "scripting"],
   "host_permissions": [
     "https://safebrowsing.googleapis.com/*",
     "https://cloudflare-dns.com/*",
@@ -39,5 +39,11 @@
     "https://rdap.nominet.uk/*"
   ],
   "optional_permissions": ["webNavigation"],
-  "optional_host_permissions": ["<all_urls>"]
+  "optional_host_permissions": ["<all_urls>"],
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/mark.png", "icons/logo.png"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

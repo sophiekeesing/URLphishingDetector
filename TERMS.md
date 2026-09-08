@@ -2,12 +2,12 @@
 
 _Last updated: 2026-09-04_
 
-URL Shield is free software provided as a **supplemental, best-effort
+chick-check is free software provided as a **supplemental, best-effort
 security aid**. By installing or using it you accept the following.
 
 ## No guarantee of protection
 
-URL Shield uses heuristics, a bundled list, and — if you enable them —
+chick-check uses heuristics, a bundled list, and — if you enable them —
 third-party reputation lookups. **No such tool detects every phishing
 or malicious site, and it may occasionally flag a legitimate one.** It
 does not replace a current browser, operating-system updates, careful
@@ -16,7 +16,7 @@ a warning and you decide whether to proceed.
 
 ## "As is"
 
-To the extent permitted by applicable law, URL Shield is provided
+To the extent permitted by applicable law, chick-check is provided
 without warranties of any kind, express or implied, including
 merchantability, fitness for a particular purpose, and
 non-infringement.
@@ -35,14 +35,14 @@ the EU, liability is **not** excluded for:
 
 Subject to the above, the maintainer is not liable for indirect or
 consequential loss, loss of data, or loss of profit arising from use of
-or inability to use URL Shield. Because the software is supplied free of
+or inability to use chick-check. Because the software is supplied free of
 charge and without a commercial protection promise, any residual
 liability for slight negligence is limited to breaches of essential
 contractual obligations and to damage that was foreseeable and typical.
 
 ## No misleading claims
 
-URL Shield is not marketed as a complete anti-phishing solution and
+chick-check is not marketed as a complete anti-phishing solution and
 makes no protection-outcome promise. If this software is ever bundled
 with advertising or offered as a paid tier, these terms and the
 associated claims must be reviewed against EU consumer- and
@@ -50,7 +50,7 @@ unfair-competition law before release.
 
 ## False positives
 
-If URL Shield wrongly flags a site, use the "Report a false positive"
+If chick-check wrongly flags a site, use the "Report a false positive"
 link in the popup. There is no guaranteed turnaround, but reports are
 reviewed and the bundled list and heuristics are adjusted in
 subsequent releases. The detection logic version shown in the popup

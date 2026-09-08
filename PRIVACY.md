@@ -1,8 +1,8 @@
-# URL Shield — Privacy Policy
+# chick-check — Privacy Policy
 
 _Last updated: 2026-09-04 · Detection logic v3.0.0_
 
-This policy explains exactly what URL Shield processes, what (if
+This policy explains exactly what chick-check processes, what (if
 anything) leaves your device, and on what legal basis. It is written to
 GDPR Art. 13/14.
 
@@ -14,7 +14,7 @@ this with a real contact point before public distribution.
 
 ## What the extension does by default
 
-When you click the URL Shield icon it inspects the address of the
+When you click the chick-check icon it inspects the address of the
 current tab **entirely on your device**:
 
 - structural heuristics (raw-IP host, `http://`, deep subdomain chains,
@@ -132,6 +132,18 @@ without an explicit click.
   leads, because doing so would send the request, and the request is
   exactly what a tracker records. It stops and asks instead.
 
+### 6. Right-click check
+
+Always available, no setting. When you pick **Check this link with
+chick-check** from the context menu, the address you chose is evaluated
+using whichever checks you have enabled, exactly as if you had pasted it
+into the popup. The result is drawn into the current page.
+
+- **What is sent to the link itself:** nothing. It is never fetched.
+- **Page access:** the extension is granted access to that one tab, at
+  that moment, only because you clicked the menu item (`activeTab`). It
+  does not read the page content — it only adds the result card.
+
 ## What we never do
 
 - No browsing history, bookmarks, form data, or page content is read or
@@ -141,8 +153,8 @@ without an explicit click.
 - No data is sold or shared with anyone other than the recipients named
   above, and only as described.
 - No third party used here (Google Safe Browsing, Cloudflare, Quad9,
-  the domain registries) publishes or crowd-shares the queries URL
-  Shield sends. Services that do (e.g. VirusTotal, urlscan.io public
+  the domain registries) publishes or crowd-shares the queries
+  chick-check sends. Services that do (e.g. VirusTotal, urlscan.io public
   scans) are deliberately **not** integrated.
 
 ## Storage on your device (ePrivacy / § 25 TDDDG)

@@ -3,40 +3,56 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>URL Shield — Phishing Link Checker</title>
+  <title>chick-check</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="popup">
-    <header class="popup__header">
-      <span class="popup__logo">🛡️</span>
-      <div>
-        <h1 class="popup__title">URL Shield</h1>
-        <p class="popup__subtitle">Is this page safe to use?</p>
-      </div>
-    </header>
+    <div class="topbar">
+      <button id="settings-btn" class="iconbtn" type="button" title="Settings" aria-label="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" aria-hidden="true">
+          <path d="M3 6h11M18 6h3M3 12h3M10 12h11M3 18h8M15 18h6" />
+          <circle cx="16" cy="6" r="2" /><circle cx="8" cy="12" r="2" /><circle cx="13" cy="18" r="2" />
+        </svg>
+      </button>
+      <button id="about-btn" class="iconbtn" type="button" title="About chick-check" aria-label="About">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 7.5v.01" />
+        </svg>
+      </button>
+      <span class="topbar__spacer"></span>
+      <button id="close-btn" class="iconbtn" type="button" title="Close" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="brand">
+      <img class="brand__logo" src="icons/logo.png" alt="chick-check" />
+      <p class="brand__tagline">We help you keep your data only yours and nobody else's.</p>
+    </div>
 
     <section class="checker">
       <label for="url-input" class="visually-hidden">URL to check</label>
       <input
         id="url-input"
+        class="field"
         type="text"
-        placeholder="e.g. https://example.com"
+        placeholder="Paste a link to check"
         autocomplete="off"
         spellcheck="false"
       />
-      <button id="check-btn" type="button">Check</button>
+      <button id="check-btn" class="btn btn--primary" type="button">Check</button>
     </section>
 
-    <button id="use-tab-btn" class="use-tab-btn" type="button" hidden>
-      📍 Re-check this tab
-    </button>
-
-    <!-- Shown when no cloud check is enabled -->
-    <p id="cloud-off-note" class="cloud-note" hidden>
-      Local checks only.
-      <a id="enable-cloud-link" href="#">Turn on online checks →</a>
+    <p id="cloud-off-note" class="note" hidden>
+      Local checks only. <a id="enable-cloud-link" href="#">Turn on online checks →</a>
     </p>
+    <p id="mode-note" class="note" hidden></p>
 
     <section id="result-panel" class="result" hidden>
       <div class="result__badge">
@@ -47,21 +63,18 @@
       <div class="meter" id="meter">
         <div class="meter__track">
           <div class="meter__fill" id="meter-fill"></div>
-          <span class="meter__tick meter__tick--sus" id="tick-sus"></span>
-          <span class="meter__tick meter__tick--dan" id="tick-dan"></span>
+          <span class="meter__tick" id="tick-sus"></span>
+          <span class="meter__tick" id="tick-dan"></span>
         </div>
-        <div class="meter__caption">
-          <span id="meter-score">0</span>/100 risk score
-        </div>
+        <div class="meter__caption"><span id="meter-score">0</span>/100 risk score</div>
       </div>
 
       <p class="result__message" id="result-message"></p>
       <ul class="result__reasons" id="result-reasons"></ul>
-      <ul class="result__sources" id="result-sources" hidden></ul>
+      <ul class="sources" id="result-sources" hidden></ul>
     </section>
 
     <footer class="popup__footer">
-      <span id="mode-note" hidden></span>
       <span id="detection-version"></span>
       <a id="report-fp-link" href="#" target="_blank" rel="noopener" hidden>Report a false positive</a>
       <a id="privacy-link" href="PRIVACY.md" target="_blank" rel="noopener">Privacy</a>

@@ -1,6 +1,6 @@
 # Security Policy — Coordinated Vulnerability Disclosure
 
-URL Shield is a "product with digital elements" in the sense of the EU
+chick-check is a "product with digital elements" in the sense of the EU
 Cyber Resilience Act (Regulation 2024/2847). This file is its
 Coordinated Vulnerability Disclosure (CVD) policy and reporting channel.
 
@@ -38,7 +38,7 @@ vendors.
 
 ## CRA reporting obligations (from 11 September 2026)
 
-If URL Shield is placed on the EU market in the course of a commercial
+If chick-check is placed on the EU market in the course of a commercial
 activity, the maintainer must report **actively exploited
 vulnerabilities** and **severe incidents** to ENISA via the Single
 Reporting Platform:

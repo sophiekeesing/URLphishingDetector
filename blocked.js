@@ -24,7 +24,7 @@ const noteEl = document.getElementById("note");
 // controlled: it is the address they wanted you to open.
 urlEl.textContent = target;
 
-document.getElementById("version").textContent = `Logic v${DETECTION_VERSION}`;
+document.getElementById("version").textContent = `logic v${DETECTION_VERSION}`;
 document.getElementById("fp-link").href = FALSE_POSITIVE_CONTACT;
 
 const verdict = evaluate(target);
@@ -36,13 +36,15 @@ const isKnownLogger = verdict.signals?.some((s) => s.id === "ipLogger");
 const onlyHidden = verdict.status !== "dangerous" && verdict.hidesDestination;
 
 if (isKnownLogger) {
-  document.querySelector(".blocked__title").textContent =
+  document.getElementById("sheet-title").textContent =
     "This link is a tracker";
   leadEl.textContent =
     "Opening it would have recorded your IP address, rough location, browser and device — and then forwarded you to a real site, so nothing would have looked wrong.";
   noteEl.textContent = "Nothing has been sent yet. If you continue, it records you.";
 } else if (onlyHidden) {
-  document.querySelector(".blocked__title").textContent =
+  // Not a confirmed threat — retone the page so it does not read as one.
+  document.querySelector(".sheet").classList.replace("sheet--danger", "sheet--caution");
+  document.getElementById("sheet-title").textContent =
     "This link hides where it goes";
   leadEl.textContent =
     "It is a short or redirecting link, so the real destination cannot be checked from the address alone. That is also how a tracker is hidden behind an ordinary-looking link — and finding out where it leads means sending the request, which is the part that records you.";
@@ -50,7 +52,7 @@ if (isKnownLogger) {
     "Nothing has been sent yet. Only continue if you trust whoever gave you this link.";
 } else {
   leadEl.textContent =
-    "URL Shield judged this page likely to be a phishing or scam site, so the browser was stopped before it sent the request.";
+    "chick-check judged this page likely to be a phishing or scam site, so the browser was stopped before it sent the request.";
   noteEl.textContent = "Nothing has been sent to this site yet.";
 }
 
