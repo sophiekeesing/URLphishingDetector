@@ -30,11 +30,23 @@ suspends the extension.
 security, GDPR Art. 6(1)(f) and Recital 49. A balancing test is
 recorded in [`docs/LIA.md`](docs/LIA.md).
 
-## Optional features you can switch on
+## Network lookups — ON by default, and how to turn them off
 
-These are **off until you enable them** on the options page. Enabling
-one is your consent (GDPR Art. 6(1)(a)) for that processing. You can
-withdraw at any time; the on-device checks keep working.
+The three lookups below are **enabled when you install**, because
+protection that has to be switched on protects almost nobody. They run
+on the legitimate interest in network and information security
+(GDPR Art. 6(1)(f), Recital 49), not on consent.
+
+Because you are not asked first, two things matter:
+
+- the options page opens automatically on first install, so you see
+  what is running before you browse;
+- **every one can be turned off individually**, and "Turn everything
+  off" disables all of them at once. The on-device checks keep working,
+  and with them off nothing about your browsing leaves your device.
+
+You can object to this processing at any time (GDPR Art. 21) by
+switching the relevant lookup off.
 
 ### 1. Google Safe Browsing check
 
@@ -91,10 +103,29 @@ withdraw at any time; the on-device checks keep working.
 
 ### 4. "Scan as I browse"
 
-Enabling this grants the `tabs` permission and lets the extension read
-the URL of pages you navigate to so it can show a badge automatically.
-It still only runs the checks you have enabled. Disabling it revokes
-the permission.
+On by default. Lets the extension read the URL of pages you navigate to
+so it can show a verdict on the toolbar badge. It only runs the checks
+you have left enabled, and stores no history.
+
+### 5. "Stop dangerous pages before they load" — OFF by default
+
+The one feature that is **off until you switch it on**, because it needs
+permission to see every address you navigate to
+(`webNavigation` + all sites) and the browser will not grant that
+without an explicit click.
+
+- **What it does:** when the on-device engine rates a page dangerous,
+  the browser is stopped **before it sends the request** and a warning
+  page is shown instead, with a *Continue anyway* button.
+- **What is sent:** nothing. The decision uses only the local engine —
+  no network call is made, and none of the enabled lookups are consulted,
+  because they are far too slow to hold a navigation open.
+- **Why it matters:** against a link tracker, a warning that arrives
+  after the page loads is already too late — the request itself is what
+  records you.
+- **What is stored:** if you choose *Continue anyway*, that address is
+  remembered in memory for the rest of the browsing session so you are
+  not asked twice. It is never written to disk.
 
 ## What we never do
 

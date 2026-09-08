@@ -11,12 +11,13 @@ import {
   getSettings,
   setSettings,
   DEFAULT_SETTINGS,
-  CLOUD_HOSTS,
+  BLOCKING_PERMISSIONS,
 } from "./lib/config.js";
 
 const sbToggle = document.getElementById("sb-toggle");
 const dnsToggle = document.getElementById("dns-toggle");
 const ageToggle = document.getElementById("age-toggle");
+const blockToggle = document.getElementById("block-toggle");
 const autoToggle = document.getElementById("auto-toggle");
 const apiKeyInput = document.getElementById("api-key");
 const toggleKeyBtn = document.getElementById("toggle-key");
@@ -27,6 +28,7 @@ const withdrawBtn = document.getElementById("withdraw");
 const sbStatus = document.getElementById("sb-status");
 const dnsStatus = document.getElementById("dns-status");
 const ageStatus = document.getElementById("age-status");
+const blockStatus = document.getElementById("block-status");
 const autoStatus = document.getElementById("auto-status");
 
 function status(el, text, kind = "") {
@@ -55,80 +57,63 @@ async function refresh() {
   status(dnsStatus, s.dnsCheckEnabled ? "On." : "Off.");
   status(ageStatus, s.domainAgeEnabled ? "On." : "Off.");
   status(autoStatus, s.autoScanEnabled ? "On." : "Off.");
+
+  // Blocking depends on a permission that can be revoked from Chrome's
+  // own settings, so trust the permission, not just the stored flag.
+  const canBlock = await chrome.permissions.contains(BLOCKING_PERMISSIONS);
+  blockToggle.checked = s.blockingEnabled && canBlock;
+  status(
+    blockStatus,
+    s.blockingEnabled && !canBlock
+      ? "Off — the required permission was revoked. Switch it on again to re-grant."
+      : blockToggle.checked
+        ? "On — dangerous pages are stopped before loading."
+        : "Off.",
+    s.blockingEnabled && !canBlock ? "err" : ""
+  );
 }
 refresh();
 
-// --- Safe Browsing toggle --------------------------------------
+// The three lookup hosts are granted at install, so these toggles only
+// flip a setting — there is no permission round-trip to fail.
+function simpleToggle(input, key, statusEl, onLabel = "On.") {
+  input.addEventListener("change", async () => {
+    await setSettings({ [key]: input.checked, cloudConsentAt: Date.now() });
+    status(statusEl, input.checked ? onLabel : "Off.", input.checked ? "ok" : "");
+  });
+}
+
 sbToggle.addEventListener("change", async () => {
-  if (sbToggle.checked) {
-    const granted = await chrome.permissions.request({
-      origins: [CLOUD_HOSTS.safeBrowsing],
-    });
-    if (!granted) {
-      sbToggle.checked = false;
-      status(sbStatus, "Permission denied — check not enabled.", "err");
-      return;
-    }
-    await setSettings({ safeBrowsingEnabled: true, cloudConsentAt: Date.now() });
-    status(sbStatus, apiKeyInput.value.trim() ? "On." : "On — now add an API key.", "ok");
-  } else {
-    await setSettings({ safeBrowsingEnabled: false });
-    await maybeRevoke();
-    status(sbStatus, "Off.", "");
-  }
+  await setSettings({ safeBrowsingEnabled: sbToggle.checked, cloudConsentAt: Date.now() });
+  if (!sbToggle.checked) return status(sbStatus, "Off.", "");
+  status(
+    sbStatus,
+    apiKeyInput.value.trim() ? "On." : "On, but no API key saved yet.",
+    apiKeyInput.value.trim() ? "ok" : "err"
+  );
 });
 
-// --- DNS toggle ---------------------------------------------
-dnsToggle.addEventListener("change", async () => {
-  if (dnsToggle.checked) {
-    const granted = await chrome.permissions.request({ origins: CLOUD_HOSTS.dns });
-    if (!granted) {
-      dnsToggle.checked = false;
-      status(dnsStatus, "Permission denied — check not enabled.", "err");
-      return;
-    }
-    await setSettings({ dnsCheckEnabled: true, cloudConsentAt: Date.now() });
-    status(dnsStatus, "On.", "ok");
-  } else {
-    await setSettings({ dnsCheckEnabled: false });
-    await maybeRevoke();
-    status(dnsStatus, "Off.", "");
-  }
-});
+simpleToggle(dnsToggle, "dnsCheckEnabled", dnsStatus);
+simpleToggle(ageToggle, "domainAgeEnabled", ageStatus);
+simpleToggle(autoToggle, "autoScanEnabled", autoStatus);
 
-// --- Domain age toggle ------------------------------------
-ageToggle.addEventListener("change", async () => {
-  if (ageToggle.checked) {
-    const granted = await chrome.permissions.request({ origins: CLOUD_HOSTS.rdap });
+// --- Blocking toggle --------------------------------------
+// This one does need a permission, and Chrome only grants it from a
+// user gesture — which is why it cannot be on out of the box.
+blockToggle.addEventListener("change", async () => {
+  if (blockToggle.checked) {
+    const granted = await chrome.permissions.request(BLOCKING_PERMISSIONS);
     if (!granted) {
-      ageToggle.checked = false;
-      status(ageStatus, "Permission denied — check not enabled.", "err");
+      blockToggle.checked = false;
+      status(blockStatus, "Permission denied — pages will not be blocked.", "err");
       return;
     }
-    await setSettings({ domainAgeEnabled: true, cloudConsentAt: Date.now() });
-    status(ageStatus, "On.", "ok");
+    await setSettings({ blockingEnabled: true });
+    status(blockStatus, "On — dangerous pages will be stopped before loading.", "ok");
   } else {
-    await setSettings({ domainAgeEnabled: false });
-    await maybeRevoke();
-    status(ageStatus, "Off.", "");
-  }
-});
-
-// --- Auto-scan toggle -------------------------------------
-autoToggle.addEventListener("change", async () => {
-  if (autoToggle.checked) {
-    const granted = await chrome.permissions.request({ permissions: ["tabs"] });
-    if (!granted) {
-      autoToggle.checked = false;
-      status(autoStatus, "Permission denied — still scan-on-demand.", "err");
-      return;
-    }
-    await setSettings({ autoScanEnabled: true });
-    status(autoStatus, "On.", "ok");
-  } else {
-    await setSettings({ autoScanEnabled: false });
-    await chrome.permissions.remove({ permissions: ["tabs"] }).catch(() => {});
-    status(autoStatus, "Off.", "");
+    await setSettings({ blockingEnabled: false });
+    await chrome.permissions.remove(BLOCKING_PERMISSIONS).catch(() => {});
+    status(blockStatus, "Off.", "");
   }
 });
 
@@ -145,9 +130,6 @@ saveKeyBtn.addEventListener("click", async () => {
 testKeyBtn.addEventListener("click", async () => {
   const key = apiKeyInput.value.trim();
   if (!key) return status(sbStatus, "Enter a key first.", "err");
-  const hasPerm = await chrome.permissions.contains({ origins: [CLOUD_HOSTS.safeBrowsing] });
-  if (!hasPerm) return status(sbStatus, "Enable the check first (grants network access).", "err");
-
   status(sbStatus, "Testing…");
   try {
     // Sends one arbitrary 4-byte prefix. A 200 response (even an empty
@@ -181,28 +163,26 @@ testKeyBtn.addEventListener("click", async () => {
   }
 });
 
-// --- Withdraw everything --------------------------------
+// --- Turn every network feature off ---------------------
+// The lookup hosts are install-time permissions now and cannot be
+// revoked without uninstalling, so this switches off the settings that
+// decide whether anything is ever sent to them, and gives back the one
+// permission that can be handed back.
 withdrawBtn.addEventListener("click", async () => {
   await setSettings({
-    ...DEFAULT_SETTINGS,
-    safeBrowsingApiKey: apiKeyInput.value.trim(), // keep the key on file, unused
+    safeBrowsingEnabled: false,
+    dnsCheckEnabled: false,
+    domainAgeEnabled: false,
+    blockingEnabled: false,
+    autoScanEnabled: false,
+    safeBrowsingApiKey: apiKeyInput.value.trim(), // kept on file, unused
+    cloudConsentAt: Date.now(),
   });
-  await chrome.permissions.remove({
-    permissions: ["tabs"],
-    origins: [CLOUD_HOSTS.safeBrowsing, ...CLOUD_HOSTS.dns, ...CLOUD_HOSTS.rdap],
-  }).catch(() => {});
+  await chrome.permissions.remove(BLOCKING_PERMISSIONS).catch(() => {});
   await refresh();
-  status(sbStatus, "All cloud features off. Local checks still active.", "ok");
+  status(
+    sbStatus,
+    "All network features off — nothing leaves your device. Local checks still active.",
+    "ok"
+  );
 });
-
-// Revoke host permissions once no cloud check needs them.
-async function maybeRevoke() {
-  const s = await getSettings();
-  const origins = [];
-  if (!s.safeBrowsingEnabled) origins.push(CLOUD_HOSTS.safeBrowsing);
-  if (!s.dnsCheckEnabled) origins.push(...CLOUD_HOSTS.dns);
-  if (!s.domainAgeEnabled) origins.push(...CLOUD_HOSTS.rdap);
-  if (origins.length) {
-    await chrome.permissions.remove({ origins }).catch(() => {});
-  }
-}

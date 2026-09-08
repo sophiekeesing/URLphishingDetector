@@ -15,7 +15,12 @@
 
 import { evaluate, BADGE } from "./lib/verdict.js";
 import { checkReputation } from "./lib/reputation.js";
-import { getSettings, cloudEnabled, onSettingsChanged } from "./lib/config.js";
+import {
+  getSettings,
+  cloudEnabled,
+  onSettingsChanged,
+  BLOCKING_PERMISSIONS,
+} from "./lib/config.js";
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const cache = new Map(); // hostname -> { result, expires } (memory only)
@@ -65,7 +70,65 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     assessUrl(msg.url).then(sendResponse);
     return true;
   }
+  if (msg?.type === "ALLOW_ONCE") {
+    allowOnce(msg.url);
+    sendResponse({ ok: true });
+  }
 });
+
+// --- Blocking a dangerous page before it loads -------------------
+// Timing is the whole point here. webNavigation.onBeforeNavigate fires
+// BEFORE the browser sends the request, which is the last moment an
+// IP-logger link can still be stopped — once the request goes out, the
+// logging has already happened and a warning is too late.
+//
+// That means the decision has to be made without waiting for anything,
+// so only the LOCAL engine gates the block. It is synchronous and needs
+// no network. The cloud checks still run afterwards and refine the
+// badge, but they are far too slow to hold a navigation open.
+
+// URLs the user chose to visit anyway. In memory only, so the decision
+// lasts for the browsing session and is forgotten afterwards.
+const allowed = new Set();
+
+function allowOnce(url) {
+  allowed.add(url);
+}
+
+const INTERNAL = /^(chrome|edge|about|moz|extension|chrome-extension|devtools):/i;
+
+async function onBeforeNavigate(details) {
+  // Only top-level navigations; a blocked iframe would replace a
+  // fragment of someone else's page with our warning.
+  if (details.frameId !== 0) return;
+  const url = details.url;
+  if (!url || INTERNAL.test(url) || !CHECKABLE.test(url)) return;
+  if (allowed.has(url)) return;
+
+  const verdict = evaluate(url); // local only — no await before deciding
+  if (verdict.status !== "dangerous") return;
+
+  const target =
+    chrome.runtime.getURL("blocked.html") + "?url=" + encodeURIComponent(url);
+  try {
+    await chrome.tabs.update(details.tabId, { url: target });
+  } catch {
+    /* tab closed mid-navigation */
+  }
+}
+
+async function syncBlocking() {
+  const settings = await getSettings();
+  const granted = await chrome.permissions.contains(BLOCKING_PERMISSIONS);
+  const shouldBlock = settings.blockingEnabled && granted;
+
+  // chrome.webNavigation is undefined until the permission is granted.
+  if (!chrome.webNavigation) return;
+  chrome.webNavigation.onBeforeNavigate.removeListener(onBeforeNavigate);
+  if (shouldBlock) {
+    chrome.webNavigation.onBeforeNavigate.addListener(onBeforeNavigate);
+  }
+}
 
 // --- Optional "scan as I browse" -------------------------------
 const CHECKABLE = /^https?:\/\//i;
@@ -165,9 +228,20 @@ async function syncAutoScan() {
   }
 }
 
-chrome.runtime.onInstalled.addListener(syncAutoScan);
-chrome.runtime.onStartup.addListener(syncAutoScan);
-onSettingsChanged(syncAutoScan);
-chrome.permissions.onAdded.addListener(syncAutoScan);
-chrome.permissions.onRemoved.addListener(syncAutoScan);
-syncAutoScan();
+function syncAll() {
+  syncAutoScan();
+  syncBlocking();
+}
+
+chrome.runtime.onInstalled.addListener(syncAll);
+chrome.runtime.onStartup.addListener(syncAll);
+onSettingsChanged(syncAll);
+chrome.permissions.onAdded.addListener(syncAll);
+chrome.permissions.onRemoved.addListener(syncAll);
+syncAll();
+
+// Show what the extension does on first install rather than leaving the
+// user to discover that network checks are already on.
+chrome.runtime.onInstalled.addListener(({ reason }) => {
+  if (reason === "install") chrome.runtime.openOptionsPage();
+});
