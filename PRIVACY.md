@@ -126,6 +126,11 @@ without an explicit click.
 - **What is stored:** if you choose *Continue anyway*, that address is
   remembered in memory for the rest of the browsing session so you are
   not asked twice. It is never written to disk.
+- **Sub-option, on by default:** also stop links whose destination is
+  hidden (short links and unknown redirectors). Still no network call —
+  the extension deliberately does **not** resolve where a short link
+  leads, because doing so would send the request, and the request is
+  exactly what a tracker records. It stops and asks instead.
 
 ## What we never do
 

@@ -18,6 +18,7 @@ const sbToggle = document.getElementById("sb-toggle");
 const dnsToggle = document.getElementById("dns-toggle");
 const ageToggle = document.getElementById("age-toggle");
 const blockToggle = document.getElementById("block-toggle");
+const hiddenToggle = document.getElementById("hidden-toggle");
 const autoToggle = document.getElementById("auto-toggle");
 const apiKeyInput = document.getElementById("api-key");
 const toggleKeyBtn = document.getElementById("toggle-key");
@@ -62,6 +63,8 @@ async function refresh() {
   // own settings, so trust the permission, not just the stored flag.
   const canBlock = await chrome.permissions.contains(BLOCKING_PERMISSIONS);
   blockToggle.checked = s.blockingEnabled && canBlock;
+  hiddenToggle.checked = s.blockHiddenDestinations;
+  hiddenToggle.disabled = !blockToggle.checked;
   status(
     blockStatus,
     s.blockingEnabled && !canBlock
@@ -109,12 +112,25 @@ blockToggle.addEventListener("change", async () => {
       return;
     }
     await setSettings({ blockingEnabled: true });
+    hiddenToggle.disabled = false;
     status(blockStatus, "On — dangerous pages will be stopped before loading.", "ok");
   } else {
     await setSettings({ blockingEnabled: false });
     await chrome.permissions.remove(BLOCKING_PERMISSIONS).catch(() => {});
+    hiddenToggle.disabled = true;
     status(blockStatus, "Off.", "");
   }
+});
+
+hiddenToggle.addEventListener("change", async () => {
+  await setSettings({ blockHiddenDestinations: hiddenToggle.checked });
+  status(
+    blockStatus,
+    hiddenToggle.checked
+      ? "On — short and redirecting links will be stopped too."
+      : "On — only pages judged dangerous will be stopped.",
+    "ok"
+  );
 });
 
 // --- API key -------------------------------------------
@@ -174,6 +190,7 @@ withdrawBtn.addEventListener("click", async () => {
     dnsCheckEnabled: false,
     domainAgeEnabled: false,
     blockingEnabled: false,
+    blockHiddenDestinations: DEFAULT_SETTINGS.blockHiddenDestinations,
     autoScanEnabled: false,
     safeBrowsingApiKey: apiKeyInput.value.trim(), // kept on file, unused
     cloudConsentAt: Date.now(),

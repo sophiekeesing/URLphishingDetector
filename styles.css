@@ -632,6 +632,31 @@ body {
   color: #4b5261;
 }
 
+.opt-card__sub {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px dashed #d7dbe3;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.opt-card__sub input {
+  width: 15px;
+  height: 15px;
+}
+
+.opt-card__sub input:disabled + span {
+  color: #9aa1ad;
+}
+
+.opt-card__body--sub {
+  padding-left: 24px;
+  font-size: 12px;
+}
+
 .opt-card__steps {
   margin: 8px 0 0;
   padding-left: 20px;

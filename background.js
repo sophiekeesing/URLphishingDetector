@@ -95,9 +95,14 @@ function allowOnce(url) {
   allowed.add(url);
 }
 
+// Settings are needed to decide, but reading storage is async and the
+// navigation will not wait. Keep a synchronous copy, refreshed whenever
+// they change.
+let cachedSettings = null;
+
 const INTERNAL = /^(chrome|edge|about|moz|extension|chrome-extension|devtools):/i;
 
-async function onBeforeNavigate(details) {
+function onBeforeNavigate(details) {
   // Only top-level navigations; a blocked iframe would replace a
   // fragment of someone else's page with our warning.
   if (details.frameId !== 0) return;
@@ -105,20 +110,25 @@ async function onBeforeNavigate(details) {
   if (!url || INTERNAL.test(url) || !CHECKABLE.test(url)) return;
   if (allowed.has(url)) return;
 
-  const verdict = evaluate(url); // local only — no await before deciding
-  if (verdict.status !== "dangerous") return;
+  const verdict = evaluate(url); // local only — nothing awaited
+
+  // Either it looks dangerous, or it refuses to say where it goes.
+  // The second case is the one that catches a tracker chained behind
+  // an innocent-looking shortener.
+  const hidden =
+    cachedSettings?.blockHiddenDestinations && verdict.hidesDestination;
+  if (verdict.status !== "dangerous" && !hidden) return;
 
   const target =
     chrome.runtime.getURL("blocked.html") + "?url=" + encodeURIComponent(url);
-  try {
-    await chrome.tabs.update(details.tabId, { url: target });
-  } catch {
+  chrome.tabs.update(details.tabId, { url: target }).catch(() => {
     /* tab closed mid-navigation */
-  }
+  });
 }
 
 async function syncBlocking() {
   const settings = await getSettings();
+  cachedSettings = settings;
   const granted = await chrome.permissions.contains(BLOCKING_PERMISSIONS);
   const shouldBlock = settings.blockingEnabled && granted;
 

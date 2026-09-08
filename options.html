@@ -117,6 +117,21 @@
         Nothing about your browsing is stored or sent; the decision is
         made on your device from the address alone.
       </p>
+
+      <label class="opt-card__sub">
+        <input type="checkbox" id="hidden-toggle" />
+        <span>Also stop links that hide where they go</span>
+      </label>
+      <p class="opt-card__body opt-card__body--sub">
+        Short links and unknown redirectors (<code>bit.ly/…</code>,
+        <code>ej.uz/…</code>). This is what defeats <strong>chaining</strong>
+        — putting a tracker behind an innocent-looking short link so
+        there is nothing left in the address to inspect. Checking where
+        such a link leads would mean sending the request, which is the
+        very thing that records you, so the only real defence is to stop
+        first and let you decide. Expect this to fire on ordinary short
+        links too; that is the trade.
+      </p>
       <span id="block-status" class="options__status" role="status"></span>
     </section>
 

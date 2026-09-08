@@ -40,6 +40,32 @@ Because a navigation cannot be held open for a network round-trip, the
 block is gated by the **local engine only** — it is synchronous and
 instant. The online lookups still run afterwards and refine the badge.
 
+### Links that hide where they go
+
+A sub-option, on by default when blocking is on: also stop short links
+and unknown redirectors (`bit.ly/…`, `ej.uz/…`).
+
+This exists because of **chaining**. Put a tracker behind an
+innocent-looking short link — `ej.uz/abc` → `urlto.me/2NeG5` → the real
+site — and there is nothing left in the address to inspect. The request
+still passes through the tracker, so it still records you; the chain
+only hides it.
+
+There is no way to resolve that chain safely. Finding out where the link
+leads means sending the request, and the request **is** the thing that
+records you — whether your browser makes it or the extension does, it
+comes from your IP either way. A third-party unshortening service would
+move the exposure rather than remove it, trading your IP for handing
+your full URLs to someone else.
+
+So the extension does not try. It stops before anything is sent and
+lets you decide, which is the one point where the outcome is still open.
+Note the verdict and the block are separate judgements here: `ej.uz/abc`
+scores 15 (safe — it is probably fine) yet is still stopped, because
+"probably fine" and "verified" are not the same claim. Expect this to
+fire on ordinary short links; that is the trade, and it is one toggle
+to turn off.
+
 ### Domain age
 
 Free and keyless, via [RDAP](https://www.rfc-editor.org/rfc/rfc7482) —
