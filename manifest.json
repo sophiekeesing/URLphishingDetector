@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "URL Shield — Phishing Link Checker",
-  "version": "3.0.0",
-  "description": "Warns you about likely phishing pages. Local checks by default; optional privacy-preserving Google Safe Browsing and DNS lookups you switch on yourself.",
+  "version": "5.0.0",
+  "description": "Blocks likely phishing pages, IP-logger links and disguised redirects before they load, using local checks plus Safe Browsing, DNS and domain-age lookups.",
   "action": {
     "default_popup": "index.html",
     "default_title": "URL Shield",
@@ -22,9 +22,8 @@
     "type": "module"
   },
   "options_page": "options.html",
-  "permissions": ["activeTab", "storage"],
-  "optional_permissions": ["tabs"],
-  "optional_host_permissions": [
+  "permissions": ["activeTab", "storage", "tabs"],
+  "host_permissions": [
     "https://safebrowsing.googleapis.com/*",
     "https://cloudflare-dns.com/*",
     "https://dns.quad9.net/*",
@@ -38,5 +37,7 @@
     "https://rdap.gmoregistry.net/*",
     "https://pubapi.registry.google/*",
     "https://rdap.nominet.uk/*"
-  ]
+  ],
+  "optional_permissions": ["webNavigation"],
+  "optional_host_permissions": ["<all_urls>"]
 }
