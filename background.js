@@ -22,9 +22,8 @@ import {
   onSettingsChanged,
   BLOCKING_PERMISSIONS,
 } from "./lib/config.js";
-
-const CACHE_TTL_MS = 10 * 60 * 1000;
-const cache = new Map(); // hostname -> { result, expires } (memory only)
+import { cacheGet, cacheSet, cacheClear, coalesce } from "./lib/cache.js";
+import { loadBackoffState } from "./lib/throttle.js";
 
 async function assessUrl(rawUrl) {
   const offline = evaluate(rawUrl);
@@ -42,28 +41,37 @@ async function assessUrl(rawUrl) {
     return { ...offline, sources: [], cloud: false };
   }
 
-  const cached = cache.get(hostname);
-  if (cached && cached.expires > Date.now()) return cached.result;
+  const cached = await cacheGet(hostname);
+  if (cached) return cached;
 
-  let reputation = { malicious: false, reasons: [], sources: [] };
-  try {
-    reputation = await checkReputation(offline.href, settings);
-  } catch {
-    // Network failure — fall back to the local verdict silently.
-  }
+  // Restoring a session opens many tabs of the same site at once.
+  // coalesce makes those share one set of lookups instead of each
+  // firing its own.
+  return coalesce(hostname, async () => {
+    let reputation = { malicious: false, reasons: [], sources: [] };
+    try {
+      reputation = await checkReputation(offline.href, settings);
+    } catch {
+      // Network failure — fall back to the local verdict silently.
+    }
 
-  const result = {
-    ...evaluate(rawUrl, { reputation }),
-    sources: reputation.sources,
-    cloud: true,
-  };
-  cache.set(hostname, { result, expires: Date.now() + CACHE_TTL_MS });
-  return result;
+    const result = {
+      ...evaluate(rawUrl, { reputation }),
+      sources: reputation.sources,
+      cloud: true,
+    };
+    await cacheSet(hostname, result);
+    return result;
+  });
 }
 
 // Clear the cache whenever settings change (a toggle flip must take
 // effect immediately, including withdrawal of consent).
-onSettingsChanged(() => cache.clear());
+onSettingsChanged(() => cacheClear());
+
+// Back-off state is persisted, so a worker restart must not forget that
+// a service asked us to stop.
+loadBackoffState();
 
 // --- Popup <-> worker messaging ---------------------------------
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {

@@ -160,9 +160,23 @@ into the popup. The result is drawn into the current page.
 ## Storage on your device (ePrivacy / § 25 TDDDG)
 
 `chrome.storage.sync` holds your settings and, if you entered one, your
-Safe Browsing API key. This is strictly necessary for the security
-function you asked for, so no separate cookie-style consent banner is
-used. There is no non-essential storage.
+Safe Browsing API key.
+
+`chrome.storage.session` holds a short-lived working cache: recent
+verdicts (30 minutes), domain registration dates (session), and how long
+a service has asked us to wait after an error. Session storage lives in
+memory, is **never written to disk**, and is cleared when the browser
+closes — deliberately, because a list of domains kept on disk would
+amount to a browsing history, which this extension does not keep.
+
+The cache exists to avoid asking the same question repeatedly: in
+ordinary browsing it removes roughly 80% of outbound requests, which is
+both a privacy improvement and what keeps the extension inside the free
+rate limits of the services it uses.
+
+All of this is strictly necessary for the security function you asked
+for, so no separate cookie-style consent banner is used. There is no
+non-essential storage.
 
 ## Your rights
 

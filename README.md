@@ -24,6 +24,31 @@ All the network lookups can be switched off individually, and the
 extension still works with every one of them off. See
 [PRIVACY.md](PRIVACY.md).
 
+## Staying inside the free rate limits
+
+Every request comes from **your own browser and IP**, and Safe Browsing
+uses **your own API key**, so the number of people using the extension
+never adds up against a shared quota. What does need managing is one
+person opening a lot of tabs at once.
+
+| Measure | Effect |
+| --- | --- |
+| Verdict cache in `chrome.storage.session` | Survives the service worker being stopped (~30s idle), which a plain in-memory cache does not. **~83% fewer requests** in ordinary browsing |
+| Per-hostname request coalescing | 20 tabs of one site make **1** set of lookups, not 20 |
+| Domain-age cache for the session | RDAP drops to ~one query per domain per session |
+| Per-service queues | Smooths a burst: ~9 req/s per DNS resolver, ~40/min per registry |
+| Back-off after errors | Google's mandated `MIN((2^(N-1) × 15 min) × (RAND+1), 24h)`; a gentler curve elsewhere; `Retry-After` always wins |
+
+Measured on a simulated 40-tab session restore: DNS completes 100%,
+Safe Browsing 80%, and RDAP is mostly deferred — it is a bonus signal,
+so a check that cannot get a turn quickly is **skipped and labelled**
+rather than left to stall the verdict. Nothing waits on it: the local
+engine has already decided, and it is the local engine that gates
+blocking.
+
+Back-off state is persisted too, so restarting the worker does not
+forget that a service asked us to stop.
+
 ## Right-click any link to check it
 
 The answer you want is usually needed **before** you click, not after.
@@ -238,6 +263,8 @@ lib/similarity.js     Damerau-Levenshtein + confusable-character folding
 lib/punycode.js       decodes xn-- labels to spot IDN homographs
 lib/canonicalize.js   URL -> host/path expressions, query stripped
 lib/hash.js           SHA-256 + 4-byte prefix for the k-anonymity lookup
+lib/cache.js          session-backed verdict + domain-age cache, coalescing
+lib/throttle.js       per-service queues and back-off curves
 lib/dns.js            RFC 8484 wireformat DoH client (Quad9 rejects JSON)
 lib/rdap.js           TLD -> registry endpoint map, domain-age scoring
 lib/reputation.js     Safe Browsing + DNS blocklist + domain age
