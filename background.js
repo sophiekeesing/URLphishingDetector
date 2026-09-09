@@ -259,26 +259,37 @@ const MENU = {
   page: "chick-check-page",
 };
 
+const MENU_ITEMS = [
+  { id: MENU.link, title: "Check this link with chick-check", contexts: ["link"] },
+  { id: MENU.selection, title: 'Check "%s" with chick-check', contexts: ["selection"] },
+  { id: MENU.page, title: "Check this page with chick-check", contexts: ["page"] },
+];
+
+// Built exactly once per worker start. Without this guard the three
+// entry points below (module load, onInstalled, onStartup) overlap:
+// removeAll() from a later call can wipe items an earlier call just
+// created, and the resulting duplicate-id failures are reported through
+// lastError rather than thrown, so the menu can quietly end up missing.
+let menusBuilt = null;
+
 function buildMenus() {
-  chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create({
-      id: MENU.link,
-      title: "Check this link with chick-check",
-      contexts: ["link"],
+  if (menusBuilt) return menusBuilt;
+  menusBuilt = new Promise((done) => {
+    chrome.contextMenus.removeAll(() => {
+      void chrome.runtime.lastError; // no menus to remove yet is fine
+      let left = MENU_ITEMS.length;
+      for (const item of MENU_ITEMS) {
+        chrome.contextMenus.create(item, () => {
+          // Must be read inside the callback, or it belongs to whatever
+          // call happened to finish last.
+          const err = chrome.runtime.lastError;
+          if (err) console.warn("chick-check: menu item failed:", err.message);
+          if (--left === 0) done();
+        });
+      }
     });
-    chrome.contextMenus.create({
-      id: MENU.selection,
-      title: 'Check "%s" with chick-check',
-      contexts: ["selection"],
-    });
-    chrome.contextMenus.create({
-      id: MENU.page,
-      title: "Check this page with chick-check",
-      contexts: ["page"],
-    });
-    // create() reports failures through lastError rather than throwing.
-    void chrome.runtime.lastError;
   });
+  return menusBuilt;
 }
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
