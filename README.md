@@ -209,7 +209,7 @@ phishing patterns flagged, **0/34** false positives on real sites.
 
 ## Install (Chrome / Edge)
 
-1. Clone the repo, check out the `extension` branch.
+1. Clone the repo (everything lives on `main`).
 2. `chrome://extensions` → enable **Developer mode** → **Load unpacked**
    → pick this folder.
 3. The options page opens on first install so you can see what is
