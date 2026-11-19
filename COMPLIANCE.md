@@ -85,7 +85,7 @@ counsel review before any commercial or large-scale distribution.
 | Least privilege | Base: `activeTab` + `storage`. Optional: `tabs`, and host access for the two APIs — requested at runtime on opt-in. → `manifest.json`, `options.js` |
 | Data-use disclosure + linked privacy policy | `PRIVACY.md`, linked from popup and options; fill in the store listing fields to match |
 | Manifest V3 | Yes. No blocking API used; observe-and-warn only |
-| Cross-browser | Uses `chrome.*` with feature detection; `optional_host_permissions` is Chrome 116+. Verify Firefox behaviour before an AMO listing |
+| Cross-browser | One manifest for Chrome/Edge 121+ and Firefox 140+; the extension API goes through `lib/browser.js` (`browser` or `chrome`). Before an AMO listing, add `data_collection_permissions` to the manifest (hostnames and domains leave the device, so not `none`) |
 
 ## Still to do before public / commercial release
 

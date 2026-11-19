@@ -10,9 +10,13 @@
 import {
   getSettings,
   setSettings,
+  onSettingsChanged,
   DEFAULT_SETTINGS,
   BLOCKING_PERMISSIONS,
+  CLOUD_HOSTS,
+  EXTENSION_VERSION,
 } from "./lib/config.js";
+import { api } from "./lib/browser.js";
 
 const sbToggle = document.getElementById("sb-toggle");
 const dnsToggle = document.getElementById("dns-toggle");
@@ -31,6 +35,11 @@ const dnsStatus = document.getElementById("dns-status");
 const ageStatus = document.getElementById("age-status");
 const blockStatus = document.getElementById("block-status");
 const autoStatus = document.getElementById("auto-status");
+const permCard = document.getElementById("perm-card");
+const permList = document.getElementById("perm-list");
+const permThose = document.getElementById("perm-those");
+const permGrantBtn = document.getElementById("perm-grant");
+const permStatus = document.getElementById("perm-status");
 
 function status(el, text, kind = "") {
   el.textContent = text;
@@ -40,6 +49,7 @@ function status(el, text, kind = "") {
 // --- Load current state ------------------------------------------
 async function refresh() {
   const s = await getSettings();
+  refreshPermissions(s);
   sbToggle.checked = s.safeBrowsingEnabled;
   dnsToggle.checked = s.dnsCheckEnabled;
   ageToggle.checked = s.domainAgeEnabled;
@@ -59,9 +69,10 @@ async function refresh() {
   status(ageStatus, s.domainAgeEnabled ? "On." : "Off.");
   status(autoStatus, s.autoScanEnabled ? "On." : "Off.");
 
-  // Blocking depends on a permission that can be revoked from Chrome's
-  // own settings, so trust the permission, not just the stored flag.
-  const canBlock = await chrome.permissions.contains(BLOCKING_PERMISSIONS);
+  // Blocking depends on a permission that can be revoked from the
+  // browser's own settings, so trust the permission, not just the
+  // stored flag.
+  const canBlock = await api.permissions.contains(BLOCKING_PERMISSIONS);
   blockToggle.checked = s.blockingEnabled && canBlock;
   hiddenToggle.checked = s.blockHiddenDestinations;
   hiddenToggle.disabled = !blockToggle.checked;
@@ -76,6 +87,65 @@ async function refresh() {
   );
 }
 refresh();
+
+// --- Lookup permissions the user has taken back -----------------
+// The lookup hosts are granted at install, but Firefox (about:addons)
+// and Chrome/Edge (Site access) both let the user switch them off
+// later. The lookups then report "not run"; this says why, and offers
+// to grant them again.
+const SERVICES = [
+  { setting: "safeBrowsingEnabled", name: "Google Safe Browsing", origins: [CLOUD_HOSTS.safeBrowsing] },
+  { setting: "dnsCheckEnabled", name: "the DNS resolvers", origins: CLOUD_HOSTS.dns },
+  { setting: "domainAgeEnabled", name: "the domain registries", origins: CLOUD_HOSTS.rdap },
+];
+
+// Kept up to date so the click handler can use it without awaiting.
+let missingOrigins = [];
+
+async function refreshPermissions(settings) {
+  const s = settings || (await getSettings());
+  const missing = [];
+  const names = [];
+  for (const service of SERVICES) {
+    if (!s[service.setting]) continue; // off anyway, so nothing is lost
+    // One origin at a time, so a single revoked registry still shows up.
+    const lacking = [];
+    for (const origin of service.origins) {
+      const has = await api.permissions.contains({ origins: [origin] }).catch(() => true);
+      if (!has) lacking.push(origin);
+    }
+    if (lacking.length) {
+      missing.push(...lacking);
+      names.push(service.name);
+    }
+  }
+  missingOrigins = missing;
+  permCard.hidden = missing.length === 0;
+  permList.textContent = names.join(" and ").replace(/ and (?=.* and )/g, ", ");
+  permThose.textContent = names.length === 1 ? "that check is" : "those checks are";
+}
+
+permGrantBtn.addEventListener("click", () => {
+  // request() must be the first thing this click does. Browsers only
+  // show a permission prompt in direct response to a user action, and
+  // Firefox no longer counts it as one after an await.
+  api.permissions
+    .request({ origins: missingOrigins })
+    .then((granted) => {
+      status(
+        permStatus,
+        granted ? "Granted — the lookups will run again." : "Not granted — those lookups stay off.",
+        granted ? "ok" : "err"
+      );
+      return refreshPermissions();
+    })
+    .catch(() => status(permStatus, "The browser refused the request.", "err"));
+});
+
+api.permissions.onAdded.addListener(() => refreshPermissions());
+api.permissions.onRemoved.addListener(() => refreshPermissions());
+// A lookup switched on or off changes which permissions matter.
+onSettingsChanged(() => refreshPermissions());
 
 // The three lookup hosts are granted at install, so these toggles only
 // flip a setting — there is no permission round-trip to fail.
@@ -101,11 +171,11 @@ simpleToggle(ageToggle, "domainAgeEnabled", ageStatus);
 simpleToggle(autoToggle, "autoScanEnabled", autoStatus);
 
 // --- Blocking toggle --------------------------------------
-// This one does need a permission, and Chrome only grants it from a
-// user gesture — which is why it cannot be on out of the box.
+// This one does need a permission, and the browser only grants it from
+// a user gesture — which is why it cannot be on out of the box.
 blockToggle.addEventListener("change", async () => {
   if (blockToggle.checked) {
-    const granted = await chrome.permissions.request(BLOCKING_PERMISSIONS);
+    const granted = await api.permissions.request(BLOCKING_PERMISSIONS);
     if (!granted) {
       blockToggle.checked = false;
       status(blockStatus, "Permission denied — pages will not be blocked.", "err");
@@ -116,7 +186,7 @@ blockToggle.addEventListener("change", async () => {
     status(blockStatus, "On — dangerous pages will be stopped before loading.", "ok");
   } else {
     await setSettings({ blockingEnabled: false });
-    await chrome.permissions.remove(BLOCKING_PERMISSIONS).catch(() => {});
+    await api.permissions.remove(BLOCKING_PERMISSIONS).catch(() => {});
     hiddenToggle.disabled = true;
     status(blockStatus, "Off.", "");
   }
@@ -156,7 +226,7 @@ testKeyBtn.addEventListener("click", async () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          client: { clientId: "chick-check", clientVersion: "6.0.0" },
+          client: { clientId: "chick-check", clientVersion: EXTENSION_VERSION },
           clientStates: [],
           threatInfo: {
             threatTypes: ["SOCIAL_ENGINEERING", "MALWARE"],
@@ -195,7 +265,7 @@ withdrawBtn.addEventListener("click", async () => {
     safeBrowsingApiKey: apiKeyInput.value.trim(), // kept on file, unused
     cloudConsentAt: Date.now(),
   });
-  await chrome.permissions.remove(BLOCKING_PERMISSIONS).catch(() => {});
+  await api.permissions.remove(BLOCKING_PERMISSIONS).catch(() => {});
   await refresh();
   status(
     sbStatus,

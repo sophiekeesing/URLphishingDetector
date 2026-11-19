@@ -29,6 +29,21 @@
       <a href="PRIVACY.md" target="_blank" rel="noopener">privacy policy</a>.
     </p>
 
+    <!-- Shown only when an enabled lookup has lost its permission ---->
+    <section class="opt-card opt-card--warn" id="perm-card" hidden>
+      <p class="opt-card__body">
+        <strong>Some lookups can't run.</strong> The browser's permission
+        for <span id="perm-list"></span> has been switched off, so
+        <span id="perm-those">those checks are</span> skipped. That can
+        happen in <code>about:addons</code> (Firefox) or under
+        <em>Site access</em> in <code>chrome://extensions</code>.
+      </p>
+      <div class="opt-card__row">
+        <button id="perm-grant" type="button">Permission missing, click to re-grant</button>
+      </div>
+      <span id="perm-status" class="options__status" role="status"></span>
+    </section>
+
     <!-- Safe Browsing ------------------------------------------------->
     <section class="opt-card">
       <label class="opt-card__head">
@@ -171,10 +186,19 @@
     </div>
 
     <p class="options__note">
-      Stored with <code>chrome.storage.sync</code>: your settings and API
-      key only. No browsing history, no analytics, no telemetry. A
-      10-minute in-memory cache of recent verdicts is kept to avoid
-      repeat lookups and is cleared when the service worker stops.
+      Stored in the browser's synced extension storage: your settings and
+      API key only. Chrome and Edge sync it through your browser account;
+      Firefox Sync does too, but only when <em>Add-ons</em> is ticked in its
+      sync settings. No browsing history, no analytics, no telemetry. A
+      30-minute cache of recent verdicts is kept in memory to avoid repeat
+      lookups and is cleared when the browser closes.
+    </p>
+    <p class="options__note">
+      <strong>Private windows:</strong> chick-check only runs there if you
+      allow it — in Firefox under <code>about:addons</code> → chick-check →
+      <em>Run in Private Windows</em>, in Chrome and Edge with
+      <em>Allow in Incognito</em> / <em>Allow in InPrivate</em> on the
+      extensions page.
     </p>
     <p class="options__note">
       <a href="PRIVACY.md" target="_blank" rel="noopener">Privacy policy</a> ·

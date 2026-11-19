@@ -14,9 +14,9 @@ import {
   DANGEROUS_AT,
 } from "./lib/verdict.js";
 import { DETECTION_VERSION, FALSE_POSITIVE_CONTACT } from "./lib/config.js";
+import { api } from "./lib/browser.js";
 
-const isExtensionContext =
-  typeof chrome !== "undefined" && !!chrome.runtime && !!chrome.runtime.id;
+const isExtensionContext = !!api?.runtime?.id;
 
 const inputEl = document.getElementById("url-input");
 const checkBtn = document.getElementById("check-btn");
@@ -36,7 +36,7 @@ const meterFill = document.getElementById("meter-fill");
 const meterScore = document.getElementById("meter-score");
 
 const version = isExtensionContext
-  ? chrome.runtime.getManifest().version
+  ? api.runtime.getManifest().version
   : DETECTION_VERSION;
 versionEl.textContent = `v ${version}`;
 
@@ -67,7 +67,7 @@ function setButtonMode() {
 async function getVerdict(rawInput) {
   if (isExtensionContext) {
     try {
-      const res = await chrome.runtime.sendMessage({ type: "CHECK_URL", url: rawInput });
+      const res = await api.runtime.sendMessage({ type: "CHECK_URL", url: rawInput });
       if (res) return res;
     } catch {
       /* worker asleep — fall through to local-only */
@@ -162,7 +162,7 @@ if (isExtensionContext) {
 
   const openOptions = (e) => {
     e.preventDefault();
-    chrome.runtime.openOptionsPage();
+    api.runtime.openOptionsPage();
   };
   document.getElementById("settings-btn").addEventListener("click", openOptions);
   enableCloudLink.addEventListener("click", openOptions);
@@ -179,7 +179,7 @@ async function checkActiveTab() {
   try {
     // activeTab: granted for the current tab while the popup is open,
     // so no broad "tabs" access is needed just to read this one URL.
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const [tab] = await api.tabs.query({ active: true, currentWindow: true });
     if (tab?.url && /^https?:\/\//i.test(tab.url)) {
       inputEl.value = tab.url;
       runCheck(tab.url);

@@ -464,6 +464,11 @@ body {
   background: var(--brand-wash);
 }
 
+.opt-card--warn {
+  border-color: var(--danger-edge);
+  background: var(--danger-wash);
+}
+
 .opt-card__head {
   display: flex;
   align-items: center;

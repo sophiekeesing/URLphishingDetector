@@ -159,10 +159,15 @@ into the popup. The result is drawn into the current page.
 
 ## Storage on your device (ePrivacy / § 25 TDDDG)
 
-`chrome.storage.sync` holds your settings and, if you entered one, your
-Safe Browsing API key.
+The browser's synced extension storage (`storage.sync`) holds your
+settings and, if you entered one, your Safe Browsing API key. If you
+use your browser's sync, these follow you to your other devices:
+Chrome and Edge sync them through your Google or Microsoft account,
+Firefox through Firefox Sync — and Firefox only when *Add-ons* is
+ticked in its Sync settings. That sync is run by the browser vendor,
+not by chick-check; no copy ever reaches us.
 
-`chrome.storage.session` holds a short-lived working cache: recent
+`storage.session` holds a short-lived working cache: recent
 verdicts (30 minutes), domain registration dates (session), and how long
 a service has asked us to wait after an error. Session storage lives in
 memory, is **never written to disk**, and is cleared when the browser
