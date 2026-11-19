@@ -72,6 +72,34 @@
       <p class="result__message" id="result-message"></p>
       <ul class="result__reasons" id="result-reasons"></ul>
       <ul class="sources" id="result-sources" hidden></ul>
+
+      <!-- Pause / resume automatic scanning for this site -->
+      <div class="excl" id="excl-panel" hidden>
+        <p class="excl__paused" id="excl-paused" hidden></p>
+        <button id="excl-resume" class="excl__btn" type="button" hidden>Resume scanning this site</button>
+
+        <button id="excl-start" class="excl__btn" type="button">Don't scan this site</button>
+        <div class="excl__form" id="excl-form" hidden>
+          <label class="excl__opt">
+            <input type="radio" name="excl-mode" value="domain" checked />
+            <span id="excl-domain-label"></span>
+          </label>
+          <label class="excl__opt" id="excl-host-opt">
+            <input type="radio" name="excl-mode" value="host" />
+            <span id="excl-host-label"></span>
+          </label>
+          <p class="excl__info">
+            No badge, no online checks and no blocking on this site. You can
+            still check it here or with a right-click.
+          </p>
+          <p class="excl__warn" id="excl-warn" role="alert" hidden></p>
+          <div class="excl__actions">
+            <button id="excl-confirm" class="excl__btn excl__btn--go" type="button">Stop scanning</button>
+            <button id="excl-cancel" class="excl__btn" type="button">Cancel</button>
+          </div>
+        </div>
+        <p class="excl__msg" id="excl-msg" role="status"></p>
+      </div>
     </section>
 
     <footer class="popup__footer">

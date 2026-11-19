@@ -17,6 +17,19 @@ import {
   EXTENSION_VERSION,
 } from "./lib/config.js";
 import { api } from "./lib/browser.js";
+import {
+  loadExclusions,
+  addExclusion,
+  removeExclusion,
+  clearExclusions,
+  setExclusionSync,
+  onExclusionsChanged,
+  validateEntry,
+  normalizeHost,
+  MAX_EXCLUSIONS,
+} from "./lib/exclusions.js";
+import { evaluate } from "./lib/verdict.js";
+import { toUnicode } from "./lib/punycode.js";
 
 const sbToggle = document.getElementById("sb-toggle");
 const dnsToggle = document.getElementById("dns-toggle");
@@ -246,6 +259,139 @@ testKeyBtn.addEventListener("click", async () => {
     }
   } catch {
     status(sbStatus, "Could not reach the Safe Browsing server.", "err");
+  }
+});
+
+// --- Sites you don't want scanned -------------------------
+const exclInput = document.getElementById("excl-input");
+const exclMode = document.getElementById("excl-mode");
+const exclAdd = document.getElementById("excl-add");
+const exclWarn = document.getElementById("excl-warn");
+const exclWarnActions = document.getElementById("excl-warn-actions");
+const exclAddAnyway = document.getElementById("excl-add-anyway");
+const exclAddCancel = document.getElementById("excl-add-cancel");
+const exclStatus = document.getElementById("excl-status");
+const exclList = document.getElementById("excl-list");
+const exclCount = document.getElementById("excl-count");
+const exclClear = document.getElementById("excl-clear");
+const exclSync = document.getElementById("excl-sync");
+
+async function renderExclusions() {
+  const list = await loadExclusions();
+  const rows = [...list.entries()]
+    .map(([host, entry]) => ({ host, shown: toUnicode(host), ...entry }))
+    .sort((a, b) => a.shown.localeCompare(b.shown));
+
+  exclList.replaceChildren(
+    ...rows.map(({ host, shown, m, t }) => {
+      const li = document.createElement("li");
+      const name = document.createElement("span");
+      name.className = "excl-list__host";
+      name.textContent = shown;
+      if (shown !== host) name.title = host; // show the real (punycode) name too
+      const meta = document.createElement("span");
+      meta.className = "excl-list__meta";
+      meta.textContent =
+        (m === "domain" ? "and subdomains" : "exact address") +
+        (t ? ` · added ${new Date(t).toLocaleDateString()}` : "");
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "ghost-btn";
+      remove.textContent = "Remove";
+      remove.addEventListener("click", async () => {
+        await removeExclusion(host);
+        status(exclStatus, `Removed ${shown} — it is scanned again.`, "ok");
+      });
+      li.append(name, meta, remove);
+      return li;
+    })
+  );
+
+  exclCount.textContent = `${rows.length} of ${MAX_EXCLUSIONS} sites`;
+  exclClear.disabled = rows.length === 0;
+  exclSync.checked = (await getSettings()).syncExclusions !== false;
+}
+renderExclusions();
+onExclusionsChanged(renderExclusions);
+
+function resetExclusionForm() {
+  exclWarn.hidden = true;
+  exclWarnActions.hidden = true;
+}
+
+// The site's current local verdict, so a dangerous site gets a warning.
+function currentStatus(input) {
+  const host = normalizeHost(input);
+  return host ? evaluate("https://" + host + "/").status : undefined;
+}
+
+async function saveExclusion() {
+  const input = exclInput.value;
+  const result = await addExclusion(input, exclMode.value, { status: currentStatus(input) });
+  resetExclusionForm();
+  if (!result.ok) return status(exclStatus, result.error, "err");
+  exclInput.value = "";
+  status(exclStatus, `Added ${toUnicode(result.host)} (${result.mode === "domain" ? "and its subdomains" : "exact address only"}).`, "ok");
+}
+
+function tryAddExclusion() {
+  resetExclusionForm();
+  const input = exclInput.value;
+  const check = validateEntry(input, exclMode.value, { status: currentStatus(input) });
+  if (!check.ok) return status(exclStatus, check.error, "err");
+  if (check.warning) {
+    // Risky: say why and let the user decide.
+    exclWarn.textContent = check.warning;
+    exclWarn.hidden = false;
+    exclWarnActions.hidden = false;
+    status(exclStatus, "");
+    return;
+  }
+  saveExclusion();
+}
+
+exclAdd.addEventListener("click", tryAddExclusion);
+exclInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") tryAddExclusion();
+});
+exclInput.addEventListener("input", resetExclusionForm);
+exclAddAnyway.addEventListener("click", saveExclusion);
+exclAddCancel.addEventListener("click", () => {
+  resetExclusionForm();
+  status(exclStatus, "");
+});
+
+// Two clicks, so the whole list is not lost to one slip.
+let clearArmed = null;
+exclClear.addEventListener("click", async () => {
+  if (!clearArmed) {
+    exclClear.textContent = "Click again to remove all";
+    clearArmed = setTimeout(() => {
+      clearArmed = null;
+      exclClear.textContent = "Remove all";
+    }, 4000);
+    return;
+  }
+  clearTimeout(clearArmed);
+  clearArmed = null;
+  exclClear.textContent = "Remove all";
+  await clearExclusions();
+  status(exclStatus, "List cleared — every site is scanned again.", "ok");
+});
+
+exclSync.addEventListener("change", async () => {
+  try {
+    await setExclusionSync(exclSync.checked);
+    status(
+      exclStatus,
+      exclSync.checked
+        ? "The list now syncs with your browser account."
+        : "The list is now kept in this browser only.",
+      "ok"
+    );
+  } catch {
+    exclSync.checked = !exclSync.checked;
+    status(exclStatus, "The browser didn't move the list. Try again.", "err");
   }
 });
 

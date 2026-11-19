@@ -29,12 +29,14 @@ counsel review before any commercial or large-scale distribution.
 | Transparency (Art. 13/14) | `PRIVACY.md`, linked from popup and options |
 | DPIA (Art. 35) | `docs/DPIA-screening.md` — screened out, with re-trigger list |
 | Accountability (Art. 5(2)) | `DETECTION_VERSION` recorded in every verdict; LIA + DPIA screening retained |
+| Exclusion list = new data category (browsing-related personal data) | Hostname, scope and date only, set by the user; synced via the browser vendor or kept local (user's choice), never sent to us; deletable in options. Excluded sites send **less** data: no lookups at all. → `lib/exclusions.js`, `PRIVACY.md` §7 |
 
 ## 2. ePrivacy / device storage (§ 25 TDDDG)
 
 - Only "strictly necessary" storage: settings + API key + transient
-  cache. No non-essential storage, so no consent banner. → `PRIVACY.md`,
-  `lib/config.js`
+  cache, plus the exclusion list the user creates themselves. No
+  non-essential storage, so no consent banner. → `PRIVACY.md`,
+  `lib/config.js`, `lib/exclusions.js`
 - No telemetry or analytics exists in the codebase.
 
 ## 3. User autonomy & false positives

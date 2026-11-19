@@ -15,6 +15,16 @@ import {
 } from "./lib/verdict.js";
 import { DETECTION_VERSION, FALSE_POSITIVE_CONTACT } from "./lib/config.js";
 import { api } from "./lib/browser.js";
+import {
+  loadExclusions,
+  matchingEntry,
+  normalizeHost,
+  validateEntry,
+  addExclusion,
+  removeExclusion,
+} from "./lib/exclusions.js";
+import { registrableDomain } from "./lib/heuristics.js";
+import { toUnicode } from "./lib/punycode.js";
 
 const isExtensionContext = !!api?.runtime?.id;
 
@@ -83,7 +93,9 @@ async function runCheck(rawInput) {
   checkBtn.disabled = true;
   checkBtn.textContent = "Checking…";
   try {
-    renderResult(await getVerdict(value));
+    const verdict = await getVerdict(value);
+    renderResult(verdict);
+    await renderExclusion(verdict);
     shownUrl = value;
   } finally {
     checkBtn.disabled = false;
@@ -140,6 +152,122 @@ function renderResult({ status, reasons, sources, cloud, score }) {
   reportFpLink.hidden = !isExtensionContext || status === "error";
   cloudOffNote.hidden = !isExtensionContext || status === "error" || cloud === true;
 }
+
+// --- Pause / resume automatic scanning for a site ---------------
+// Talks to lib/exclusions.js directly; the background notices the
+// storage change and updates badges itself.
+const exclPanel = document.getElementById("excl-panel");
+const exclPaused = document.getElementById("excl-paused");
+const exclResume = document.getElementById("excl-resume");
+const exclStart = document.getElementById("excl-start");
+const exclForm = document.getElementById("excl-form");
+const exclDomainLabel = document.getElementById("excl-domain-label");
+const exclHostOpt = document.getElementById("excl-host-opt");
+const exclHostLabel = document.getElementById("excl-host-label");
+const exclWarn = document.getElementById("excl-warn");
+const exclConfirm = document.getElementById("excl-confirm");
+const exclCancel = document.getElementById("excl-cancel");
+const exclMsg = document.getElementById("excl-msg");
+const modeInputs = [...document.querySelectorAll('input[name="excl-mode"]')];
+
+// What the panel is about: { url, status, hosts: { domain, host }, entry }
+let exclTarget = null;
+
+const show = (host) => toUnicode(host);
+const scopeText = (host, mode) =>
+  mode === "domain" ? `${show(host)} and its subdomains` : `only ${show(host)}`;
+
+// The whole-domain choice covers the registrable domain (example.com
+// for mail.example.com) — unless that is a shared suffix such as
+// github.io, where it falls back to the site's own host.
+function scopeHosts(host) {
+  // An IP address has no domain above it.
+  if (validateEntry(host, "domain").mode === "host") return { domain: host, host };
+  const registrable = registrableDomain(host);
+  const domain = validateEntry(registrable, "domain").ok ? registrable : host;
+  return { domain, host };
+}
+
+async function renderExclusion(verdict) {
+  exclPanel.hidden = true;
+  exclForm.hidden = true;
+  exclMsg.textContent = "";
+  exclTarget = null;
+  if (!isExtensionContext || verdict.status === "error" || !verdict.href) return;
+  const host = normalizeHost(verdict.href);
+  if (!host) return;
+
+  const entry = matchingEntry(verdict.href, await loadExclusions());
+  exclTarget = { url: verdict.href, status: verdict.status, hosts: scopeHosts(host), entry };
+  exclPanel.hidden = false;
+
+  exclPaused.hidden = !entry;
+  exclResume.hidden = !entry;
+  exclStart.hidden = !!entry;
+  if (entry) {
+    exclPaused.textContent =
+      `This site is on your exclusion list — automatic scanning is paused for ` +
+      `${scopeText(entry.host, entry.m)}. Checked now because you asked.`;
+  }
+}
+
+function selectedMode() {
+  return modeInputs.find((i) => i.checked)?.value || "domain";
+}
+
+// Re-run the rules for the chosen scope: errors block, warnings ask.
+function updateExclusionCheck() {
+  const mode = selectedMode();
+  const check = validateEntry(exclTarget.hosts[mode], mode, { status: exclTarget.status });
+  exclWarn.hidden = !(check.error || check.warning);
+  exclWarn.textContent = check.error || check.warning || "";
+  exclConfirm.disabled = !check.ok;
+  exclConfirm.textContent = check.warning ? "Exclude anyway" : "Stop scanning";
+  exclConfirm.classList.toggle("excl__btn--risky", Boolean(check.warning));
+}
+
+exclStart.addEventListener("click", () => {
+  if (!exclTarget) return;
+  const { domain, host } = exclTarget.hosts;
+  const ip = validateEntry(host, "domain").mode === "host";
+  exclDomainLabel.textContent = scopeText(domain, "domain");
+  exclHostLabel.textContent = `only this exact address (${show(host)})`;
+  // Two choices only when they differ; an IP address has no subdomains.
+  modeInputs[0].closest("label").hidden = ip;
+  exclHostOpt.hidden = !ip && domain === host;
+  modeInputs.find((i) => i.value === (ip ? "host" : "domain")).checked = true;
+  exclStart.hidden = true;
+  exclForm.hidden = false;
+  updateExclusionCheck();
+});
+
+modeInputs.forEach((i) => i.addEventListener("change", updateExclusionCheck));
+
+exclCancel.addEventListener("click", () => {
+  exclForm.hidden = true;
+  exclStart.hidden = false;
+});
+
+exclConfirm.addEventListener("click", async () => {
+  const mode = selectedMode();
+  const result = await addExclusion(exclTarget.hosts[mode], mode, { status: exclTarget.status });
+  if (!result.ok) {
+    exclWarn.hidden = false;
+    exclWarn.textContent = result.error;
+    return;
+  }
+  const { url, status } = exclTarget;
+  await renderExclusion({ href: url, status });
+  exclMsg.textContent = "Scanning paused. Manage the list in Settings.";
+});
+
+exclResume.addEventListener("click", async () => {
+  if (!exclTarget?.entry) return;
+  await removeExclusion(exclTarget.entry.host);
+  const { url, status } = exclTarget;
+  await renderExclusion({ href: url, status });
+  exclMsg.textContent = "Scanning resumed for this site.";
+});
 
 checkBtn.addEventListener("click", () => runCheck());
 inputEl.addEventListener("input", setButtonMode);

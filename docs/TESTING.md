@@ -119,6 +119,39 @@ needs *Add-ons* ticked in its Sync settings.
       add-on. If not, use Developer Edition with
       `xpinstall.signatures.required = false` for this test.
 
+## 8a. Site exclusions
+
+First run the unit tests: `node --test` from the repository root. All
+must pass.
+
+- [ ] Popup on `https://example.com/` → *Don't scan this site* → *Stop
+      scanning*. Badge turns grey **II**, tooltip "scanning paused for
+      this site".
+- [ ] DevTools of the background (Chrome: *service worker* link on the
+      extension card; Firefox: *Inspect*) → Network tab: reload the
+      excluded site, **no** requests to Safe Browsing, DNS or RDAP.
+- [ ] With blocking on, exclude a site, then open a dangerous test
+      address on it: not blocked.
+- [ ] Popup on the excluded site still shows a verdict, with "This site
+      is on your exclusion list". Right-click → *Check this page*: the
+      card says "On your exclusion list. Checked because you asked."
+- [ ] Exclude `google.com`, then open
+      `https://www.google.com/url?q=https://instogram.com`: still
+      flagged dangerous (and blocked, if blocking is on).
+- [ ] Options → add `bit.ly` and `grabify.link`: a warning appears and
+      needs *Add anyway*. Add `com` and `co.uk`: rejected with a message.
+- [ ] *Resume scanning this site* in the popup: the normal badge comes
+      back on that site's open tabs.
+- [ ] Two profiles on the same account: a site added on profile 1 shows
+      on profile 2 after a sync; removing it there resumes scanning.
+- [ ] Offline, add a different site on each profile, then reconnect:
+      both sites survive.
+- [ ] Add sites until 400: the next one is refused with a clear message
+      and nothing in the list is lost.
+- [ ] *Sync my exclusion list* off: the list stays, and changes no
+      longer reach the other profile. On again: the list syncs.
+- [ ] *Turn everything off*: the exclusion list is still there.
+
 ## 9. Detection unchanged
 
 Unless the change was meant to alter detection, scores must be the same

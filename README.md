@@ -208,6 +208,37 @@ ordinary site by its address alone.
 Current benchmark ([lib/heuristics.js](lib/heuristics.js)): **34/34**
 phishing patterns flagged, **0/34** false positives on real sites.
 
+## Excluding a site
+
+Open the popup on a site and choose **Don't scan this site**, or add
+sites under **Sites you don't want scanned** in Options. On an excluded
+site:
+
+| | |
+| --- | --- |
+| Badge | grey **II**, tooltip "scanning paused for this site" |
+| Online lookups | none sent — nothing about the site leaves the device |
+| Block before load | not applied |
+| Popup / right-click check | still runs, and says the site is on your list |
+
+Scope is the site and its subdomains (default) or only the exact
+address. The list syncs through your browser account (Chrome / Edge
+sync, Firefox Sync with *Add-ons* ticked) unless you switch *Sync my
+exclusion list* off; it never reaches us.
+
+Guard rails:
+
+- **Destinations are always checked.** With `google.com` excluded,
+  `google.com/url?q=https://instogram.com` is still flagged.
+- **No public suffixes.** `com`, `co.uk` or `github.io` cannot be
+  excluded as a whole — only a site on them.
+- **Risky sites need a second click.** Excluding a site rated dangerous,
+  a known IP logger or a link shortener shows what you lose (for
+  `bit.ly`: the hidden-destination check for every `bit.ly` link).
+- **No "always allow" on the warning page.** *Continue anyway* stays a
+  one-time, in-memory choice that is never synced.
+- At most 400 sites.
+
 ## Supported browsers
 
 | Browser | Minimum | Notes |
@@ -317,5 +348,7 @@ lib/dns.js            RFC 8484 wireformat DoH client (Quad9 rejects JSON)
 lib/rdap.js           TLD -> registry endpoint map, domain-age scoring
 lib/reputation.js     Safe Browsing + DNS blocklist + domain age
 lib/verdict.js        score thresholds -> one verdict
+lib/exclusions.js     sites the user does not want scanned: matching + storage
+test/                 unit tests, run with `node --test` (Node 22+, no dependencies)
 docs/TESTING.md       manual test list, run in every browser before a release
 ```

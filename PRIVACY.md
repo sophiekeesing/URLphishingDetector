@@ -1,6 +1,6 @@
 # chick-check — Privacy Policy
 
-_Last updated: 2026-09-04 · Detection logic v3.0.0_
+_Last updated: 2026-11-19 · Detection logic v4.1.0_
 
 This policy explains exactly what chick-check processes, what (if
 anything) leaves your device, and on what legal basis. It is written to
@@ -144,6 +144,26 @@ into the popup. The result is drawn into the current page.
   that moment, only because you clicked the menu item (`activeTab`). It
   does not read the page content — it only adds the result card.
 
+### 7. Sites you don't want scanned
+
+You can exclude a site from the popup ("Don't scan this site") or in
+the options page. On an excluded site the badge shows that scanning is
+paused, **none of the network lookups above are sent**, and blocking is
+not applied. If you check the site yourself (popup or right-click), the
+check still runs, and says the site is on your list. A link that sends
+you on from an excluded site to a different one is still checked.
+
+- **What is stored:** the site's hostname, whether it covers
+  subdomains, and the date you added it. Because it names sites you
+  visit, we treat this list as personal data.
+- **Where:** in the browser's synced extension storage, so it follows
+  you to your other devices — or, if you switch off *Sync my exclusion
+  list*, in this browser only. Sync is run by Google, Microsoft or
+  Mozilla as part of your browser account. **The list never reaches us.**
+- **How to delete it:** remove sites one by one or with *Remove all* in
+  the options page, or remove the extension. *Turn everything off* does
+  not delete the list.
+
 ## What we never do
 
 - No browsing history, bookmarks, form data, or page content is read or
@@ -160,7 +180,9 @@ into the popup. The result is drawn into the current page.
 ## Storage on your device (ePrivacy / § 25 TDDDG)
 
 The browser's synced extension storage (`storage.sync`) holds your
-settings and, if you entered one, your Safe Browsing API key. If you
+settings, if you entered one your Safe Browsing API key, and the list
+of sites you chose not to have scanned (§7; in `storage.local` instead
+when you turn its sync off). If you
 use your browser's sync, these follow you to your other devices:
 Chrome and Edge sync them through your Google or Microsoft account,
 Firefox through Firefox Sync — and Firefox only when *Add-ons* is
@@ -188,8 +210,9 @@ non-essential storage.
 Access, rectification, erasure, restriction, objection, portability
 (GDPR Art. 15–21). Because almost all processing is local and transient,
 in practice: use the options page to turn features off and clear your
-settings ("Turn everything off & revoke permissions"), or remove the
-extension. For the hash-prefix queries already sent to Google/Cloudflare/
+settings ("Turn everything off & revoke permissions"), delete your
+exclusion list ("Remove all"), or remove the extension. For the
+hash-prefix queries already sent to Google/Cloudflare/
 Quad9, exercise rights with those parties directly.
 
 ## Changes

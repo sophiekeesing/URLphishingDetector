@@ -14,8 +14,9 @@
 //   optional "tabs" permission. Otherwise the extension is scan-on-
 //   demand and never watches your navigation (keeps it well clear of
 //   "systematic monitoring", GDPR Art. 35).
-// • The only stored data is your settings + a 10-minute in-memory
-//   verdict cache. No history, no telemetry, no analytics.
+// • The only stored data is your settings, the sites you chose not to
+//   have scanned (lib/exclusions.js) and a 30-minute session cache of
+//   verdicts. No history, no telemetry, no analytics.
 // ---------------------------------------------------------------------
 
 import { evaluate, BADGE, VERDICT_CONTENT } from "./lib/verdict.js";
@@ -29,10 +30,26 @@ import {
   DEFAULT_SETTINGS,
 } from "./lib/config.js";
 import { api } from "./lib/browser.js";
-import { cacheGet, cacheSet, cacheClear, coalesce } from "./lib/cache.js";
+import { cacheGet, cacheSet, cacheClear, cacheDelete, coalesce } from "./lib/cache.js";
 import { loadBackoffState } from "./lib/throttle.js";
+import {
+  loadExclusions,
+  isExcluded,
+  scanPaused,
+  onExclusionsChanged,
+} from "./lib/exclusions.js";
 
-async function assessUrl(rawUrl) {
+// A check the user asked for (popup, right-click) always runs, even on
+// a site they excluded; the result then says so (`excluded: true`).
+// Automatic checks never get here for an excluded site — see
+// scanPaused() in lib/exclusions.js.
+async function assessUrl(rawUrl, { explicit = false } = {}) {
+  const result = await lookUp(rawUrl);
+  if (!explicit || !result.href) return result;
+  return { ...result, excluded: isExcluded(result.href, await currentExclusions()) };
+}
+
+async function lookUp(rawUrl) {
   const offline = evaluate(rawUrl);
   if (offline.status === "error") return offline;
 
@@ -83,7 +100,7 @@ loadBackoffState();
 // --- Popup <-> worker messaging ---------------------------------
 api.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === "CHECK_URL") {
-    assessUrl(msg.url).then(sendResponse);
+    assessUrl(msg.url, { explicit: true }).then(sendResponse);
     return true;
   }
   if (msg?.type === "ALLOW_ONCE") {
@@ -132,6 +149,10 @@ async function onBeforeNavigate(details) {
 
   const verdict = evaluate(url); // local engine only — no network
 
+  // The user excluded this site, unless it is only passing them on to
+  // somewhere else (see scanPaused in lib/exclusions.js).
+  if (scanPaused(url, verdict, await currentExclusions())) return;
+
   // Either it looks dangerous, or it refuses to say where it goes.
   // The second case is the one that catches a tracker chained behind
   // an innocent-looking shortener.
@@ -152,8 +173,12 @@ const TITLES = {
   safe: "chick-check: no threats detected",
   suspicious: "chick-check: this page looks suspicious",
   dangerous: "chick-check: this page is likely phishing",
+  paused: "chick-check: scanning paused for this site",
   error: "chick-check",
 };
+
+// Neutral grey, so a paused site reads as neither safe nor unsafe.
+const PAUSED_BADGE = { text: "II", color: "#8a9691" };
 
 // The URL we are currently rendering a badge for, per tab. A cloud
 // lookup can take seconds, and by then the user may have navigated on —
@@ -178,6 +203,16 @@ async function updateBadgeForTab(tabId, url) {
     inFlight.delete(tabId);
     await safe(() => api.action.setBadgeText({ tabId, text: "" }));
     await safe(() => api.action.setTitle({ tabId, title: TITLES.error }));
+    return;
+  }
+
+  // Excluded site: show that scanning is paused and send nothing — the
+  // lookups in assessUrl are exactly what the user asked us not to do.
+  if (scanPaused(url, evaluate(url), await currentExclusions())) {
+    inFlight.delete(tabId); // a verdict still on its way must not land
+    await safe(() => api.action.setBadgeBackgroundColor({ tabId, color: PAUSED_BADGE.color }));
+    await safe(() => api.action.setBadgeText({ tabId, text: PAUSED_BADGE.text }));
+    await safe(() => api.action.setTitle({ tabId, title: TITLES.paused }));
     return;
   }
 
@@ -303,7 +338,7 @@ api.contextMenus.onClicked.addListener(async (info, tab) => {
     return;
   }
 
-  const verdict = await assessUrl(parsed.href);
+  const verdict = await assessUrl(parsed.href, { explicit: true });
   await showResult(tab, parsed.href, verdict);
 });
 
@@ -332,6 +367,7 @@ async function showResult(tab, url, verdict) {
     label: (VERDICT_CONTENT[verdict.status] || VERDICT_CONTENT.error).label,
     message: (VERDICT_CONTENT[verdict.status] || VERDICT_CONTENT.error).message,
     reasons: verdict.reasons || [],
+    excluded: verdict.excluded === true,
     markUrl: api.runtime.getURL("icons/mark.png"),
   };
 
@@ -400,6 +436,8 @@ function renderOverlay(data) {
     .url { display: block; font-size: 11px; color: #8a9691; word-break: break-all;
            background: #f7f9f8; border-radius: 7px; padding: 6px 8px; margin-bottom: 9px; }
     .msg { font-size: 12.5px; line-height: 1.5; margin: 0; color: #33403b; }
+    .excl { font-size: 11.5px; color: #5d6b66; background: #f0f3f2; border-radius: 7px;
+            padding: 6px 8px; margin: 0 0 9px; }
     .meter { height: 5px; border-radius: 99px; background: rgba(31,42,39,.09);
              margin: 10px 0 4px; overflow: hidden; }
     .meter i { display: block; height: 100%; background: ${tone.accent}; }
@@ -420,6 +458,7 @@ function renderOverlay(data) {
     <div class="body">
       <div class="verdict"></div>
       <code class="url"></code>
+      <p class="excl" hidden>On your exclusion list. Checked because you asked.</p>
       <p class="msg"></p>
       <div class="meter"><i></i></div>
       <div class="score"></div>
@@ -432,6 +471,7 @@ function renderOverlay(data) {
   card.querySelector(".verdict").textContent = data.label;
   card.querySelector(".url").textContent = data.url;
   card.querySelector(".msg").textContent = data.message;
+  card.querySelector(".excl").hidden = !data.excluded;
 
   if (data.status === "error") {
     card.querySelector(".meter").remove();
@@ -513,6 +553,49 @@ async function syncAll() {
   if (!next.autoScan) clearBadges();
 }
 
+// --- Sites the user excluded (lib/exclusions.js) ------------------
+// Held in memory like the settings, so the navigation handler can decide
+// without waiting. Refreshed on every change, including ones synced in
+// from another device.
+let exclusions = null; // Map host -> { m, t } once read
+let exclusionsSeq = 0;
+let exclusionsReady = null;
+
+async function readExclusions() {
+  const seq = ++exclusionsSeq;
+  const next = await loadExclusions();
+  if (seq === exclusionsSeq) exclusions = next;
+  return exclusions ?? next;
+}
+
+async function currentExclusions() {
+  return exclusions ?? (await exclusionsReady);
+}
+
+// After a change, only the tabs whose site moved in or out of the list
+// need attention: an added site drops its cached verdict and pauses, a
+// removed one is scanned again.
+async function exclusionsChanged() {
+  const before = exclusions ?? new Map();
+  const after = await readExclusions();
+
+  let tabs = [];
+  try {
+    tabs = await api.tabs.query({});
+  } catch {
+    return;
+  }
+  const { autoScan } = await currentState();
+  for (const tab of tabs) {
+    if (!tab.url || !CHECKABLE.test(tab.url)) continue;
+    const was = isExcluded(tab.url, before);
+    const now = isExcluded(tab.url, after);
+    if (was === now) continue;
+    if (now) await cacheDelete(new URL(tab.url).hostname);
+    if (autoScan) updateBadgeForTab(tab.id, tab.url).catch(() => {});
+  }
+}
+
 // webNavigation only exists once its optional permission is granted, so
 // it is attached at startup if it is there, and again when it arrives.
 function listenForNavigation() {
@@ -528,8 +611,10 @@ api.tabs.onActivated.addListener(onTabActivated);
 
 settingsReady = readState();
 settingsReady.then((s) => s.autoScan || clearBadges());
+exclusionsReady = readExclusions();
 
 onSettingsChanged(syncAll);
+onExclusionsChanged(() => exclusionsChanged().catch(() => {}));
 api.permissions.onAdded.addListener(() => {
   listenForNavigation();
   syncAll();
