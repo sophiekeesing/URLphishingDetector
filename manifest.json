@@ -19,10 +19,19 @@
   },
   "background": {
     "service_worker": "background.js",
+    "scripts": [
+      "background.js"
+    ],
     "type": "module"
   },
   "options_page": "options.html",
-  "permissions": ["activeTab", "storage", "tabs", "contextMenus", "scripting"],
+  "permissions": [
+    "activeTab",
+    "storage",
+    "tabs",
+    "contextMenus",
+    "scripting"
+  ],
   "host_permissions": [
     "https://safebrowsing.googleapis.com/*",
     "https://cloudflare-dns.com/*",
@@ -38,12 +47,27 @@
     "https://pubapi.registry.google/*",
     "https://rdap.nominet.uk/*"
   ],
-  "optional_permissions": ["webNavigation"],
-  "optional_host_permissions": ["<all_urls>"],
+  "optional_permissions": [
+    "webNavigation"
+  ],
+  "optional_host_permissions": [
+    "<all_urls>"
+  ],
   "web_accessible_resources": [
     {
-      "resources": ["icons/mark.png", "icons/logo.png"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "icons/mark.png",
+        "icons/logo.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
-  ]
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{4CE7ABF8-BE2D-4E3F-8D9A-A8A393519B66}",
+      "strict_min_version": "140.0"
+    }
+  }
 }
