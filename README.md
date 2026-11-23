@@ -5,19 +5,29 @@ pages, IP-logger links and disguised redirects — and, if you switch that
 part on, stops them loading at all. It never blocks without a way
 through: every warning has a *Continue anyway*.
 
-Built privacy-first. Most of the work happens on your device. The three
-network lookups are on by default, each sends the minimum it can (a
-4-byte hash prefix, a hostname, a registrable domain — never the full
-URL or the query string), and every one can be turned off.
+Built privacy-first. Most of the work happens on your device. Auto-scan
+and all three online lookup settings are enabled by default. Safe
+Browsing stays inactive until you enter your own API key; DNS and RDAP
+lookups can run immediately. Each lookup sends only its reduced input
+(a 4-byte hash prefix, a hostname, or a registrable domain — never the
+full URL or query string).
+
+The lookup settings are optional in the sense that you can turn them
+off individually; they are not off by default. Their service hosts are
+declared in the manifest's `host_permissions`, not requested as
+runtime optional host permissions when you enable a setting. You can
+revoke host access in the browser's extension or site-access settings;
+the affected lookup then cannot run.
 
 ## How it decides
 
 | Signal | Default | Data that leaves the device |
 | --- | --- | --- |
 | **Local detection engine** | on | none |
-| **Google Safe Browsing** | on (needs a free API key) | only **4-byte SHA-256 prefixes** of host+path; never the URL, never the query string |
+| **Google Safe Browsing** | setting on; inactive until you enter an API key | only **4-byte SHA-256 prefixes** of host+path; never the URL, never the query string |
 | **DNS blocklist cross-check** | on | the **hostname only**, to Cloudflare `1.1.1.1` and Quad9 `9.9.9.9` |
 | **Domain age (RDAP)** | on | the **registrable domain only** (`example.com`), to that TLD's own registry |
+| **Scan as I browse** | on | checks pages as you navigate; online lookups follow their settings above |
 | **Block before load** | off — needs an extra permission | nothing; decided on-device |
 
 All the network lookups can be switched off individually, and the
