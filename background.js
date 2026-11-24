@@ -35,7 +35,7 @@ import { loadBackoffState } from "./lib/throttle.js";
 import {
   loadExclusions,
   isExcluded,
-  scanPaused,
+  scanUnlessPaused,
   onExclusionsChanged,
 } from "./lib/exclusions.js";
 
@@ -208,7 +208,17 @@ async function updateBadgeForTab(tabId, url) {
 
   // Excluded site: show that scanning is paused and send nothing — the
   // lookups in assessUrl are exactly what the user asked us not to do.
-  if (scanPaused(url, evaluate(url), await currentExclusions())) {
+  const scan = await scanUnlessPaused(
+    url,
+    evaluate(url),
+    await currentExclusions(),
+    (scanUrl) => {
+      inFlight.set(tabId, scanUrl);
+      return assessUrl(scanUrl);
+    }
+  );
+
+  if (scan.paused) {
     inFlight.delete(tabId); // a verdict still on its way must not land
     await safe(() => api.action.setBadgeBackgroundColor({ tabId, color: PAUSED_BADGE.color }));
     await safe(() => api.action.setBadgeText({ tabId, text: PAUSED_BADGE.text }));
@@ -216,8 +226,7 @@ async function updateBadgeForTab(tabId, url) {
     return;
   }
 
-  inFlight.set(tabId, url);
-  const { status } = await assessUrl(url);
+  const { status } = scan.result;
 
   // Navigated away (or the tab closed) while we were checking — drop
   // this result instead of showing it against the wrong page.
