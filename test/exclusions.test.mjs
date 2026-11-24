@@ -12,6 +12,7 @@ import {
   parseItems,
   entryHost,
   scanPaused,
+  scanUnlessPaused,
 } from "../lib/exclusions.js";
 import { evaluate } from "../lib/verdict.js";
 
@@ -148,6 +149,34 @@ test("an exclusion never covers where a redirect sends you", () => {
 test("scanPaused is false for sites not on the list", () => {
   const url = "https://example.org/";
   assert.equal(scanPaused(url, evaluate(url), list({ "example.com": { m: "domain", t: 1 } })), false);
+});
+
+test("an automatic scan does not run its lookup for an excluded site", async () => {
+  const url = "https://example.com/";
+  const exclusions = list({ "example.com": { m: "domain", t: 1 } });
+  let lookupCount = 0;
+
+  const result = await scanUnlessPaused(url, evaluate(url), exclusions, async () => {
+    lookupCount++;
+  });
+
+  assert.deepEqual(result, { paused: true });
+  assert.equal(lookupCount, 0);
+});
+
+test("an excluded open redirect still runs its lookup", async () => {
+  const url = "https://google.com/url?q=https://instogram.com";
+  const exclusions = list({ "google.com": { m: "domain", t: 1 } });
+  let lookupCount = 0;
+
+  const result = await scanUnlessPaused(url, evaluate(url), exclusions, async (checkedUrl) => {
+    lookupCount++;
+    return checkedUrl;
+  });
+
+  assert.equal(result.paused, false);
+  assert.equal(result.result, url);
+  assert.equal(lookupCount, 1);
 });
 
 test("parseItems keeps only well-formed x: keys", () => {
