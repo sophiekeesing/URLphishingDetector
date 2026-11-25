@@ -1,0 +1,12 @@
+{
+  "name": "chick-check",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "lint": "web-ext lint"
+  },
+  "devDependencies": {
+    "web-ext": "^9.1.0"
+  }
+}

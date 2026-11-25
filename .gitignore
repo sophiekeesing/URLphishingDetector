@@ -2,5 +2,9 @@
 *.pem
 .keys/
 
+# npm dependencies and build outputs
+node_modules/
+web-ext-artifacts/
+
 # macOS folder metadata
 .DS_Store
