@@ -1,8 +1,10 @@
 {
   "manifest_version": 3,
   "name": "chick-check",
-  "version": "6.0.0",
+  "version": "6.2.0",
   "description": "We help you keep your data only yours and nobody else's. Checks links for phishing, IP loggers and disguised redirects — before they load.",
+  "minimum_chrome_version": "121",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjYnkHCI9/bTmReIhaG6/L/uSkxTrwLmnUcONe+0JtLVZBrh6ysj9L4wwGiEtd4/SDT6JmzWzEJjuf/TcEeR6IUU6zJmo0bSlsG9aly19CrH2EKX0H6qzwwqWzsXgsGExEIikJAhPNGfjpa8/bqTicCmUWEy2b2yonHjpgKO4uPzp4gtNISZUp2rYBP4Si6S75YQOETONz9hC+UJGcMJG8rzJJ91Glm8PxBoVnh4ECj28/CLd4VzGmLnT/Kx7+tY5x4jr8drV1DgVAxzXmUl5neLfD4zRqDZWcz88ikNElMHwO8ly+x8xkg7WL9qfoVhlB9mFIu1PZ+n1kWNRGcne7QIDAQAB",
   "action": {
     "default_popup": "index.html",
     "default_title": "chick-check",
@@ -19,10 +21,23 @@
   },
   "background": {
     "service_worker": "background.js",
+    "scripts": [
+      "background.js"
+    ],
     "type": "module"
   },
   "options_page": "options.html",
-  "permissions": ["activeTab", "storage", "tabs", "contextMenus", "scripting"],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "permissions": [
+    "activeTab",
+    "storage",
+    "tabs",
+    "contextMenus",
+    "scripting"
+  ],
   "host_permissions": [
     "https://safebrowsing.googleapis.com/*",
     "https://cloudflare-dns.com/*",
@@ -38,12 +53,27 @@
     "https://pubapi.registry.google/*",
     "https://rdap.nominet.uk/*"
   ],
-  "optional_permissions": ["webNavigation"],
-  "optional_host_permissions": ["<all_urls>"],
+  "optional_permissions": [
+    "webNavigation"
+  ],
+  "optional_host_permissions": [
+    "<all_urls>"
+  ],
   "web_accessible_resources": [
     {
-      "resources": ["icons/mark.png", "icons/logo.png"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "icons/mark.png",
+        "icons/logo.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
-  ]
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{4CE7ABF8-BE2D-4E3F-8D9A-A8A393519B66}",
+      "strict_min_version": "140.0"
+    }
+  }
 }

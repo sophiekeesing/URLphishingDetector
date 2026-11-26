@@ -1,23 +1,33 @@
 # chick-check
 
-A Manifest V3 browser extension that warns you about likely phishing
+A Manifest V3 browser extension for Chrome, Edge and Firefox that warns you about likely phishing
 pages, IP-logger links and disguised redirects — and, if you switch that
 part on, stops them loading at all. It never blocks without a way
 through: every warning has a *Continue anyway*.
 
-Built privacy-first. Most of the work happens on your device. The three
-network lookups are on by default, each sends the minimum it can (a
-4-byte hash prefix, a hostname, a registrable domain — never the full
-URL or the query string), and every one can be turned off.
+Built privacy-first. Most of the work happens on your device. Auto-scan
+and all three online lookup settings are enabled by default. Safe
+Browsing stays inactive until you enter your own API key; DNS and RDAP
+lookups can run immediately. Each lookup sends only its reduced input
+(a 4-byte hash prefix, a hostname, or a registrable domain — never the
+full URL or query string).
+
+The lookup settings are optional in the sense that you can turn them
+off individually; they are not off by default. Their service hosts are
+declared in the manifest's `host_permissions`, not requested as
+runtime optional host permissions when you enable a setting. You can
+revoke host access in the browser's extension or site-access settings;
+the affected lookup then cannot run.
 
 ## How it decides
 
 | Signal | Default | Data that leaves the device |
 | --- | --- | --- |
 | **Local detection engine** | on | none |
-| **Google Safe Browsing** | on (needs a free API key) | only **4-byte SHA-256 prefixes** of host+path; never the URL, never the query string |
+| **Google Safe Browsing** | setting on; inactive until you enter an API key | only **4-byte SHA-256 prefixes** of host+path; never the URL, never the query string |
 | **DNS blocklist cross-check** | on | the **hostname only**, to Cloudflare `1.1.1.1` and Quad9 `9.9.9.9` |
 | **Domain age (RDAP)** | on | the **registrable domain only** (`example.com`), to that TLD's own registry |
+| **Scan as I browse** | on | checks pages as you navigate; online lookups follow their settings above |
 | **Block before load** | off — needs an extra permission | nothing; decided on-device |
 
 All the network lookups can be switched off individually, and the
@@ -62,7 +72,8 @@ so highlighting `paypa1-login.com` in an email works.
 The card is rendered inside a **closed shadow root**: the host page
 cannot restyle a security warning to look harmless, and its scripts
 cannot read the result out of the DOM. If a page refuses injection at
-all — `chrome://` pages, the web store, PDFs — the verdict opens in an
+all — browser pages such as `chrome://` and `about:`, the add-on
+stores, PDFs, Firefox's Reader View — the verdict opens in an
 ordinary tab instead, so the answer is never simply lost.
 
 Nothing is fetched from the link to produce this. The verdict comes from
@@ -72,7 +83,7 @@ where it goes is the thing that records you.
 ## Blocking dangerous pages
 
 Off by default because it needs permission to see the addresses you
-navigate to, which Chrome will not grant without an explicit click.
+navigate to, which the browser will not grant without an explicit click.
 Turn it on in **Options**.
 
 When on, a dangerous verdict stops the browser **before it sends the
@@ -207,13 +218,90 @@ ordinary site by its address alone.
 Current benchmark ([lib/heuristics.js](lib/heuristics.js)): **34/34**
 phishing patterns flagged, **0/34** false positives on real sites.
 
+## Excluding a site
+
+Open the popup on a site and choose **Don't scan this site**, or add
+sites under **Sites you don't want scanned** in Options. On an excluded
+site:
+
+| | |
+| --- | --- |
+| Badge | grey **II**, tooltip "scanning paused for this site" |
+| Online lookups | none sent — nothing about the site leaves the device |
+| Block before load | not applied |
+| Popup / right-click check | still runs, and says the site is on your list |
+
+Scope is the site and its subdomains (default) or only the exact
+address. The list syncs through your browser account (Chrome / Edge
+sync, Firefox Sync with *Add-ons* ticked) unless you switch *Sync my
+exclusion list* off; it never reaches us.
+
+Guard rails:
+
+- **Destinations are always checked.** With `google.com` excluded,
+  `google.com/url?q=https://instogram.com` is still flagged.
+- **No public suffixes.** `com`, `co.uk` or `github.io` cannot be
+  excluded as a whole — only a site on them.
+- **Risky sites need a second click.** Excluding a site rated dangerous,
+  a known IP logger or a link shortener shows what you lose (for
+  `bit.ly`: the hidden-destination check for every `bit.ly` link).
+- **No "always allow" on the warning page.** *Continue anyway* stays a
+  one-time, in-memory choice that is never synced.
+- At most 400 sites.
+
+## Supported browsers
+
+| Browser | Minimum | Notes |
+| --- | --- | --- |
+| Chrome, Edge | 121 | The first versions that accept a manifest declaring both a service worker and background scripts |
+| Firefox (desktop) | 140 | The oldest Firefox ESR still supported |
+| Firefox for Android | — | **Not supported yet** |
+
+One source folder and one `manifest.json` serve every browser. Chrome
+and Edge run [background.js](background.js) as a service worker,
+Firefox as an event page. [lib/browser.js](lib/browser.js) gives the
+code one name for the extension API in both.
+
+The extension is in development: there is no store listing yet, so it
+is loaded unpacked.
+
 ## Install (Chrome / Edge)
 
 1. Clone the repo (everything lives on `main`).
-2. `chrome://extensions` → enable **Developer mode** → **Load unpacked**
-   → pick this folder.
+2. `chrome://extensions` (or `edge://extensions`) → enable
+   **Developer mode** → **Load unpacked** → pick this folder.
 3. The options page opens on first install so you can see what is
    already running.
+
+The extension ID is fixed by the public `key` in `manifest.json`
+(`jaibknimhekfcnlhiidfeffbbfefglcf`), so it is the same on every
+machine and settings sync between them. The matching private key is
+only needed to publish and must never be committed (`.gitignore`
+excludes `*.pem` and `.keys/`).
+
+## Install (Firefox, development)
+
+Firefox only installs signed add-ons permanently, so during development:
+
+- **Temporary load:** `about:debugging` → *This Firefox* →
+  **Load Temporary Add-on…** → pick `manifest.json`. Click **Reload**
+  there after changing a file. The add-on is removed when Firefox
+  restarts.
+- **Auto-reload:** `npx web-ext run` starts a separate Firefox with the
+  extension and reloads it on every save. Quit Firefox (Cmd+Q) first.
+  On macOS the terminal app needs *Full Disk Access* for this, because
+  `web-ext` reads Firefox's `profiles.ini`.
+- **For testing over several days:** Firefox Developer Edition or
+  Nightly with `xpinstall.signatures.required` set to `false` in
+  `about:config` keeps an unsigned install across restarts.
+
+Settings sync through Firefox Sync only when *Add-ons* is ticked in the
+Sync settings.
+
+**Private windows:** browsers don't run extensions in private windows
+unless you allow it — Firefox under `about:addons` → chick-check →
+*Run in Private Windows*, Chrome and Edge with *Allow in Incognito* /
+*Allow in InPrivate*.
 
 Everything works immediately except the two things that genuinely
 cannot self-enable.
@@ -227,7 +315,7 @@ Right-click the icon → **Options**:
   in Google Cloud Console, create a key, paste it, **Save key**,
   **Test**. Until then that one check sits idle; the others run.
 - **Block dangerous pages before they load.** Needs `webNavigation` on
-  all sites, and Chrome only grants that from a click.
+  all sites, and the browser only grants that from a click.
 
 "Turn everything off" disables every network feature; the on-device
 engine keeps working.
@@ -249,12 +337,13 @@ mandatory obligations.
 
 ```
 manifest.json         MV3 manifest
-background.js         service worker: verdicts, badge, blocking, context menu
+background.js         background script: verdicts, badge, blocking, context menu
 index.html / script.js   popup UI + controller
 blocked.html / blocked.js  the pre-load warning page
 result.html / result.js    verdict page, used when a page refuses injection
 options.html / options.js  settings + opt-outs
 styles.css           shared styles
+lib/browser.js        one name for the extension API (`browser` or `chrome`)
 lib/config.js        defaults, settings helpers, DETECTION_VERSION
 lib/heuristics.js     the scoring engine (pure functions)
 lib/brands.js         ~150 brands + real domains, keywords, TLD risk, suffixes
@@ -269,4 +358,7 @@ lib/dns.js            RFC 8484 wireformat DoH client (Quad9 rejects JSON)
 lib/rdap.js           TLD -> registry endpoint map, domain-age scoring
 lib/reputation.js     Safe Browsing + DNS blocklist + domain age
 lib/verdict.js        score thresholds -> one verdict
+lib/exclusions.js     sites the user does not want scanned: matching + storage
+test/                 unit tests, run with `node --test` (Node 22+, no dependencies)
+docs/TESTING.md       manual test list, run in every browser before a release
 ```

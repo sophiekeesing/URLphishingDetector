@@ -11,6 +11,7 @@
 
 import { evaluate } from "./lib/verdict.js";
 import { DETECTION_VERSION, FALSE_POSITIVE_CONTACT } from "./lib/config.js";
+import { api } from "./lib/browser.js";
 
 const params = new URLSearchParams(location.search);
 const target = params.get("url") || "";
@@ -67,12 +68,17 @@ document.getElementById("back-btn").addEventListener("click", () => {
   // the first entry there is nothing to go back to, so fall back to the
   // new-tab page rather than leaving the user stranded.
   if (history.length > 1) history.back();
-  else chrome.tabs.getCurrent((tab) => tab && chrome.tabs.remove(tab.id));
+  else {
+    api.tabs
+      .getCurrent()
+      .then((tab) => tab && api.tabs.remove(tab.id))
+      .catch(() => {});
+  }
 });
 
 document.getElementById("continue-btn").addEventListener("click", async () => {
   // Ask the worker to allow this URL for the rest of the session, then
   // navigate — otherwise the interstitial would immediately re-trigger.
-  await chrome.runtime.sendMessage({ type: "ALLOW_ONCE", url: target });
+  await api.runtime.sendMessage({ type: "ALLOW_ONCE", url: target });
   location.replace(target);
 });

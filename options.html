@@ -29,6 +29,21 @@
       <a href="PRIVACY.md" target="_blank" rel="noopener">privacy policy</a>.
     </p>
 
+    <!-- Shown only when an enabled lookup has lost its permission ---->
+    <section class="opt-card opt-card--warn" id="perm-card" hidden>
+      <p class="opt-card__body">
+        <strong>Some lookups can't run.</strong> The browser's permission
+        for <span id="perm-list"></span> has been switched off, so
+        <span id="perm-those">those checks are</span> skipped. That can
+        happen in <code>about:addons</code> (Firefox) or under
+        <em>Site access</em> in <code>chrome://extensions</code>.
+      </p>
+      <div class="opt-card__row">
+        <button id="perm-grant" type="button">Permission missing, click to re-grant</button>
+      </div>
+      <span id="perm-status" class="options__status" role="status"></span>
+    </section>
+
     <!-- Safe Browsing ------------------------------------------------->
     <section class="opt-card">
       <label class="opt-card__head">
@@ -152,6 +167,52 @@
       <span id="auto-status" class="options__status" role="status"></span>
     </section>
 
+    <!-- Exclusions ------------------------------------------------->
+    <section class="opt-card" id="excl-card">
+      <label class="opt-card__head" style="cursor:default">
+        <span><strong>Sites you don't want scanned</strong></span>
+      </label>
+      <p class="opt-card__body">
+        On these sites chick-check shows a grey <strong>II</strong> badge,
+        sends <strong>nothing</strong> online and does not block. You can
+        still check them from the popup or with a right-click. Links that
+        send you on from an excluded site to somewhere else are still
+        checked.
+      </p>
+      <div class="opt-card__row">
+        <input id="excl-input" type="text" placeholder="example.com" autocomplete="off" spellcheck="false" />
+        <select id="excl-mode" aria-label="Scope">
+          <option value="domain">and its subdomains</option>
+          <option value="host">this exact address only</option>
+        </select>
+        <button id="excl-add" type="button">Add</button>
+      </div>
+      <p id="excl-warn" class="excl__warn" role="alert" hidden></p>
+      <div id="excl-warn-actions" class="opt-card__row" hidden>
+        <button id="excl-add-anyway" type="button">Add anyway</button>
+        <button id="excl-add-cancel" type="button" class="ghost-btn">Cancel</button>
+      </div>
+      <span id="excl-status" class="options__status" role="status"></span>
+
+      <ul id="excl-list" class="excl-list"></ul>
+      <div class="opt-card__row">
+        <span id="excl-count" class="excl-list__meta"></span>
+        <button id="excl-clear" type="button" class="ghost-btn">Remove all</button>
+      </div>
+
+      <label class="opt-card__sub">
+        <input type="checkbox" id="excl-sync" />
+        <span>Sync my exclusion list</span>
+      </label>
+      <p class="opt-card__body opt-card__body--sub">
+        Keeps the list in your browser account so it follows you to your
+        other devices — Chrome and Edge sync, or Firefox Sync with
+        <em>Add-ons</em> ticked. It passes through Google's or Mozilla's
+        sync servers, never ours. Off: the list stays in this browser only.
+        <em>Turn everything off</em> below does not delete it.
+      </p>
+    </section>
+
     <!-- Right-click check (no setting, just discoverability) ----->
     <section class="opt-card">
       <label class="opt-card__head" style="cursor:default">
@@ -171,10 +232,19 @@
     </div>
 
     <p class="options__note">
-      Stored with <code>chrome.storage.sync</code>: your settings and API
-      key only. No browsing history, no analytics, no telemetry. A
-      10-minute in-memory cache of recent verdicts is kept to avoid
-      repeat lookups and is cleared when the service worker stops.
+      Stored in the browser's synced extension storage: your settings and
+      API key only. Chrome and Edge sync it through your browser account;
+      Firefox Sync does too, but only when <em>Add-ons</em> is ticked in its
+      sync settings. No browsing history, no analytics, no telemetry. A
+      30-minute cache of recent verdicts is kept in memory to avoid repeat
+      lookups and is cleared when the browser closes.
+    </p>
+    <p class="options__note">
+      <strong>Private windows:</strong> chick-check only runs there if you
+      allow it — in Firefox under <code>about:addons</code> → chick-check →
+      <em>Run in Private Windows</em>, in Chrome and Edge with
+      <em>Allow in Incognito</em> / <em>Allow in InPrivate</em> on the
+      extensions page.
     </p>
     <p class="options__note">
       <a href="PRIVACY.md" target="_blank" rel="noopener">Privacy policy</a> ·

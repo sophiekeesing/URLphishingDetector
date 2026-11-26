@@ -7,6 +7,7 @@
 
 import { evaluate, VERDICT_CONTENT } from "./lib/verdict.js";
 import { DETECTION_VERSION, FALSE_POSITIVE_CONTACT } from "./lib/config.js";
+import { loadExclusions, isExcluded } from "./lib/exclusions.js";
 
 const target = new URLSearchParams(location.search).get("url") || "";
 
@@ -48,3 +49,11 @@ const list = document.getElementById("reasons");
   li.textContent = reason;
   list.appendChild(li);
 });
+
+// The user asked for this check, so it runs even on an excluded site —
+// but say so, or a "safe" here could read as contradicting their list.
+if (verdict.href) {
+  loadExclusions().then((excl) => {
+    document.getElementById("excl-note").hidden = !isExcluded(verdict.href, excl);
+  });
+}

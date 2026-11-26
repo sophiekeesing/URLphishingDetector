@@ -1,0 +1,10 @@
+# Private signing key that pins the Chrome extension ID. Never commit it.
+*.pem
+.keys/
+
+# npm dependencies and build outputs
+node_modules/
+web-ext-artifacts/
+
+# macOS folder metadata
+.DS_Store

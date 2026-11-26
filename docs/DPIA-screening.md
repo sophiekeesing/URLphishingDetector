@@ -14,10 +14,17 @@ threshold — and what would change that.
 | Systematic monitoring of a publicly accessible area | No (by default) | Default build is scan-on-demand. The optional "scan as I browse" mode is user-enabled, local-only by default, and does not record or transmit history. |
 | Sensitive data or highly personal data | No | URLs only; no special categories processed intentionally. Query strings (which could carry such data) are stripped before any hashing or transmission. |
 | Data processed on a large scale | Potentially, if widely distributed | Mitigated: transient local processing, no central collection, 4-byte-prefix k-anonymity for the only URL-derived data that leaves the device. |
-| Matching / combining datasets | No | No enrichment, no cross-dataset linkage. |
+| Matching / combining datasets | No | No enrichment, no cross-dataset linkage. The user's exclusion list (sites not to scan) is only matched against the address being checked, on the device. |
 | Data concerning vulnerable subjects | Not targeted | General-audience tool. |
 | Innovative use of new technology | No | Heuristics + established Safe Browsing / DNS techniques. No ML model. |
 | Prevents data subjects exercising a right / using a service | No | Warnings are dismissible; the tool can be disabled entirely. |
+
+**Exclusion list (since 6.2.0):** a new, small data category — the
+hostnames a user chooses not to have scanned, with scope and date. It is
+created by the user, stored in browser-synced or local extension
+storage, never sent to the maintainer, and deletable. It reduces
+processing: an excluded site sends no lookups at all. It does not change
+any criterion above.
 
 Two or more criteria met → do a DPIA. Here **zero to one** are met
 depending on distribution scale, all with strong mitigations.

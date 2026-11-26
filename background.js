@@ -1,6 +1,11 @@
 // ---------------------------------------------------------------------
-// background.js — MV3 service worker
+// background.js — background script
 // ---------------------------------------------------------------------
+// Runs as a service worker in Chrome/Edge and as an event page in
+// Firefox (manifest.json declares both). Either way the browser stops it
+// when idle, which is why the event listeners are registered at the top
+// level — see "Listeners" near the end.
+//
 // • Answers CHECK_URL messages from the popup.
 // • Local heuristics always run (legitimate interest, GDPR Art. 6(1)(f)).
 // • Cloud lookups run only if the user switched them on (consent,
@@ -9,8 +14,9 @@
 //   optional "tabs" permission. Otherwise the extension is scan-on-
 //   demand and never watches your navigation (keeps it well clear of
 //   "systematic monitoring", GDPR Art. 35).
-// • The only stored data is your settings + a 10-minute in-memory
-//   verdict cache. No history, no telemetry, no analytics.
+// • The only stored data is your settings, the sites you chose not to
+//   have scanned (lib/exclusions.js) and a 30-minute session cache of
+//   verdicts. No history, no telemetry, no analytics.
 // ---------------------------------------------------------------------
 
 import { evaluate, BADGE, VERDICT_CONTENT } from "./lib/verdict.js";
@@ -21,11 +27,29 @@ import {
   cloudEnabled,
   onSettingsChanged,
   BLOCKING_PERMISSIONS,
+  DEFAULT_SETTINGS,
 } from "./lib/config.js";
-import { cacheGet, cacheSet, cacheClear, coalesce } from "./lib/cache.js";
+import { api } from "./lib/browser.js";
+import { cacheGet, cacheSet, cacheClear, cacheDelete, coalesce } from "./lib/cache.js";
 import { loadBackoffState } from "./lib/throttle.js";
+import {
+  loadExclusions,
+  isExcluded,
+  scanUnlessPaused,
+  onExclusionsChanged,
+} from "./lib/exclusions.js";
 
-async function assessUrl(rawUrl) {
+// A check the user asked for (popup, right-click) always runs, even on
+// a site they excluded; the result then says so (`excluded: true`).
+// Automatic checks never get here for an excluded site — see
+// scanPaused() in lib/exclusions.js.
+async function assessUrl(rawUrl, { explicit = false } = {}) {
+  const result = await lookUp(rawUrl);
+  if (!explicit || !result.href) return result;
+  return { ...result, excluded: isExcluded(result.href, await currentExclusions()) };
+}
+
+async function lookUp(rawUrl) {
   const offline = evaluate(rawUrl);
   if (offline.status === "error") return offline;
 
@@ -74,9 +98,9 @@ onSettingsChanged(() => cacheClear());
 loadBackoffState();
 
 // --- Popup <-> worker messaging ---------------------------------
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+api.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === "CHECK_URL") {
-    assessUrl(msg.url).then(sendResponse);
+    assessUrl(msg.url, { explicit: true }).then(sendResponse);
     return true;
   }
   if (msg?.type === "ALLOW_ONCE") {
@@ -91,10 +115,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 // IP-logger link can still be stopped — once the request goes out, the
 // logging has already happened and a warning is too late.
 //
-// That means the decision has to be made without waiting for anything,
-// so only the LOCAL engine gates the block. It is synchronous and needs
-// no network. The cloud checks still run afterwards and refine the
-// badge, but they are far too slow to hold a navigation open.
+// That means the decision cannot wait for the network, so only the
+// LOCAL engine gates the block. It is synchronous and needs no network.
+// The cloud checks still run afterwards and refine the badge, but they
+// are far too slow to hold a navigation open.
 
 // URLs the user chose to visit anyway. In memory only, so the decision
 // lasts for the browsing session and is forgotten afterwards.
@@ -104,14 +128,11 @@ function allowOnce(url) {
   allowed.add(url);
 }
 
-// Settings are needed to decide, but reading storage is async and the
-// navigation will not wait. Keep a synchronous copy, refreshed whenever
-// they change.
-let cachedSettings = null;
+// Browser-internal pages (Chrome, Edge and Firefox) are never ours to judge.
+const INTERNAL =
+  /^(chrome|chrome-extension|edge|extension|devtools|about|moz-extension|resource|view-source):/i;
 
-const INTERNAL = /^(chrome|edge|about|moz|extension|chrome-extension|devtools):/i;
-
-function onBeforeNavigate(details) {
+async function onBeforeNavigate(details) {
   // Only top-level navigations; a blocked iframe would replace a
   // fragment of someone else's page with our warning.
   if (details.frameId !== 0) return;
@@ -119,34 +140,30 @@ function onBeforeNavigate(details) {
   if (!url || INTERNAL.test(url) || !CHECKABLE.test(url)) return;
   if (allowed.has(url)) return;
 
-  const verdict = evaluate(url); // local only — nothing awaited
+  // This listener is always registered (see "Listeners" at the end of
+  // the file), so whether blocking is on is decided here. Right after
+  // the background wakes up this waits for one local storage read —
+  // never for the network.
+  const { blocking, settings } = await currentState();
+  if (!blocking) return;
+
+  const verdict = evaluate(url); // local engine only — no network
+
+  // The user excluded this site, unless it is only passing them on to
+  // somewhere else (see scanPaused in lib/exclusions.js).
+  if (scanPaused(url, verdict, await currentExclusions())) return;
 
   // Either it looks dangerous, or it refuses to say where it goes.
   // The second case is the one that catches a tracker chained behind
   // an innocent-looking shortener.
-  const hidden =
-    cachedSettings?.blockHiddenDestinations && verdict.hidesDestination;
+  const hidden = settings.blockHiddenDestinations && verdict.hidesDestination;
   if (verdict.status !== "dangerous" && !hidden) return;
 
   const target =
-    chrome.runtime.getURL("blocked.html") + "?url=" + encodeURIComponent(url);
-  chrome.tabs.update(details.tabId, { url: target }).catch(() => {
+    api.runtime.getURL("blocked.html") + "?url=" + encodeURIComponent(url);
+  api.tabs.update(details.tabId, { url: target }).catch(() => {
     /* tab closed mid-navigation */
   });
-}
-
-async function syncBlocking() {
-  const settings = await getSettings();
-  cachedSettings = settings;
-  const granted = await chrome.permissions.contains(BLOCKING_PERMISSIONS);
-  const shouldBlock = settings.blockingEnabled && granted;
-
-  // chrome.webNavigation is undefined until the permission is granted.
-  if (!chrome.webNavigation) return;
-  chrome.webNavigation.onBeforeNavigate.removeListener(onBeforeNavigate);
-  if (shouldBlock) {
-    chrome.webNavigation.onBeforeNavigate.addListener(onBeforeNavigate);
-  }
 }
 
 // --- Optional "scan as I browse" -------------------------------
@@ -156,8 +173,12 @@ const TITLES = {
   safe: "chick-check: no threats detected",
   suspicious: "chick-check: this page looks suspicious",
   dangerous: "chick-check: this page is likely phishing",
+  paused: "chick-check: scanning paused for this site",
   error: "chick-check",
 };
+
+// Neutral grey, so a paused site reads as neither safe nor unsafe.
+const PAUSED_BADGE = { text: "II", color: "#8a9691" };
 
 // The URL we are currently rendering a badge for, per tab. A cloud
 // lookup can take seconds, and by then the user may have navigated on —
@@ -180,13 +201,32 @@ async function safe(fn) {
 async function updateBadgeForTab(tabId, url) {
   if (!url || !CHECKABLE.test(url)) {
     inFlight.delete(tabId);
-    await safe(() => chrome.action.setBadgeText({ tabId, text: "" }));
-    await safe(() => chrome.action.setTitle({ tabId, title: TITLES.error }));
+    await safe(() => api.action.setBadgeText({ tabId, text: "" }));
+    await safe(() => api.action.setTitle({ tabId, title: TITLES.error }));
     return;
   }
 
-  inFlight.set(tabId, url);
-  const { status } = await assessUrl(url);
+  // Excluded site: show that scanning is paused and send nothing — the
+  // lookups in assessUrl are exactly what the user asked us not to do.
+  const scan = await scanUnlessPaused(
+    url,
+    evaluate(url),
+    await currentExclusions(),
+    (scanUrl) => {
+      inFlight.set(tabId, scanUrl);
+      return assessUrl(scanUrl);
+    }
+  );
+
+  if (scan.paused) {
+    inFlight.delete(tabId); // a verdict still on its way must not land
+    await safe(() => api.action.setBadgeBackgroundColor({ tabId, color: PAUSED_BADGE.color }));
+    await safe(() => api.action.setBadgeText({ tabId, text: PAUSED_BADGE.text }));
+    await safe(() => api.action.setTitle({ tabId, title: TITLES.paused }));
+    return;
+  }
+
+  const { status } = scan.result;
 
   // Navigated away (or the tab closed) while we were checking — drop
   // this result instead of showing it against the wrong page.
@@ -194,23 +234,26 @@ async function updateBadgeForTab(tabId, url) {
   inFlight.delete(tabId);
 
   const badge = BADGE[status] || BADGE.error;
-  await safe(() => chrome.action.setBadgeBackgroundColor({ tabId, color: badge.color }));
-  await safe(() => chrome.action.setBadgeText({ tabId, text: badge.text }));
-  await safe(() => chrome.action.setTitle({ tabId, title: TITLES[status] || TITLES.error }));
+  await safe(() => api.action.setBadgeBackgroundColor({ tabId, color: badge.color }));
+  await safe(() => api.action.setBadgeText({ tabId, text: badge.text }));
+  await safe(() => api.action.setTitle({ tabId, title: TITLES[status] || TITLES.error }));
 }
 
-// Both listeners fire and forget, so each needs its own catch —
-// an async function's rejection is not caught by the caller's
-// try/catch once the call is not awaited.
+// Both handlers are registered once at the top level (see "Listeners"
+// at the end of the file) and check here whether auto-scan is on.
 function onTabUpdated(tabId, changeInfo, tab) {
-  if (changeInfo.status === "complete" || changeInfo.url) {
-    updateBadgeForTab(tabId, changeInfo.url || tab.url).catch(() => {});
-  }
+  if (changeInfo.status !== "complete" && !changeInfo.url) return;
+  // Fire and forget, so it needs its own catch — an async rejection is
+  // not caught by the caller once the call is not awaited.
+  currentState()
+    .then(({ autoScan }) => autoScan && updateBadgeForTab(tabId, changeInfo.url || tab.url))
+    .catch(() => {});
 }
 
 async function onTabActivated({ tabId }) {
   try {
-    const tab = await chrome.tabs.get(tabId);
+    if (!(await currentState()).autoScan) return;
+    const tab = await api.tabs.get(tabId);
     await updateBadgeForTab(tabId, tab.url);
   } catch {
     /* tab gone before we could read or badge it */
@@ -218,32 +261,18 @@ async function onTabActivated({ tabId }) {
 }
 
 // Don't let the map grow for the life of the worker.
-chrome.tabs.onRemoved.addListener((tabId) => inFlight.delete(tabId));
+api.tabs.onRemoved.addListener((tabId) => inFlight.delete(tabId));
 
-// Attach/detach the navigation listeners based on the setting + the
-// "tabs" permission actually being granted.
-async function syncAutoScan() {
-  const settings = await getSettings();
-  const hasTabs = await chrome.permissions.contains({ permissions: ["tabs"] });
-  const shouldWatch = settings.autoScanEnabled && hasTabs;
-
-  chrome.tabs.onUpdated.removeListener(onTabUpdated);
-  chrome.tabs.onActivated.removeListener(onTabActivated);
-
-  if (shouldWatch) {
-    chrome.tabs.onUpdated.addListener(onTabUpdated);
-    chrome.tabs.onActivated.addListener(onTabActivated);
-  } else {
-    // Make sure no stale badge is left behind.
-    inFlight.clear();
-    try {
-      const tabs = await chrome.tabs.query({});
-      await Promise.all(
-        tabs.map((t) => safe(() => chrome.action.setBadgeText({ tabId: t.id, text: "" })))
-      );
-    } catch {
-      /* no tabs permission — nothing to clear */
-    }
+// Used when auto-scan is off, so no stale badge is left behind.
+async function clearBadges() {
+  inFlight.clear();
+  try {
+    const tabs = await api.tabs.query({});
+    await Promise.all(
+      tabs.map((t) => safe(() => api.action.setBadgeText({ tabId: t.id, text: "" })))
+    );
+  } catch {
+    /* no tabs permission — nothing to clear */
   }
 }
 
@@ -265,6 +294,10 @@ const MENU_ITEMS = [
   { id: MENU.page, title: "Check this page with chick-check", contexts: ["page"] },
 ];
 
+// Callback style on purpose, so this uses `chrome` rather than the `api`
+// shim: in Firefox only the `chrome` namespace takes callbacks and sets
+// runtime.lastError — `browser` returns promises instead.
+//
 // Built exactly once per worker start. Without this guard the three
 // entry points below (module load, onInstalled, onStartup) overlap:
 // removeAll() from a later call can wipe items an earlier call just
@@ -292,7 +325,7 @@ function buildMenus() {
   return menusBuilt;
 }
 
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+api.contextMenus.onClicked.addListener(async (info, tab) => {
   const raw =
     info.menuItemId === MENU.link
       ? info.linkUrl
@@ -314,13 +347,27 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     return;
   }
 
-  const verdict = await assessUrl(parsed.href);
+  const verdict = await assessUrl(parsed.href, { explicit: true });
   await showResult(tab, parsed.href, verdict);
 });
 
+// Pages no extension is allowed to script: browser-internal pages
+// (including Firefox's Reader View, which is about:reader), the add-on
+// stores, and the built-in PDF viewers, which keep the PDF's own URL.
+// Trying anyway would fail too, but going straight to the fallback does
+// not depend on each browser reporting the refusal the same way.
+const NO_INJECT = new RegExp(
+  [
+    "^(about|chrome|chrome-extension|edge|devtools|moz-extension|resource|view-source|file):",
+    "^https://(addons\\.mozilla\\.org|chromewebstore\\.google\\.com|chrome\\.google\\.com/webstore|microsoftedge\\.microsoft\\.com/addons)(/|$)",
+    "\\.pdf([?#]|$)",
+  ].join("|"),
+  "i"
+);
+
 // Render into the page where the user is already looking. If that is
-// not possible — a chrome:// page, the web store, a PDF — fall back to
-// a normal tab so the answer is never simply lost.
+// not possible — a browser-internal page, an add-on store, a PDF — fall
+// back to a normal tab so the answer is never simply lost.
 async function showResult(tab, url, verdict) {
   const payload = {
     url,
@@ -329,12 +376,13 @@ async function showResult(tab, url, verdict) {
     label: (VERDICT_CONTENT[verdict.status] || VERDICT_CONTENT.error).label,
     message: (VERDICT_CONTENT[verdict.status] || VERDICT_CONTENT.error).message,
     reasons: verdict.reasons || [],
-    markUrl: chrome.runtime.getURL("icons/mark.png"),
+    excluded: verdict.excluded === true,
+    markUrl: api.runtime.getURL("icons/mark.png"),
   };
 
-  if (tab?.id != null) {
+  if (tab?.id != null && !NO_INJECT.test(tab.url || "")) {
     try {
-      await chrome.scripting.executeScript({
+      await api.scripting.executeScript({
         target: { tabId: tab.id },
         func: renderOverlay,
         args: [payload],
@@ -344,8 +392,8 @@ async function showResult(tab, url, verdict) {
       /* page refuses injection — fall through */
     }
   }
-  chrome.tabs.create({
-    url: chrome.runtime.getURL("result.html") + "?url=" + encodeURIComponent(url),
+  api.tabs.create({
+    url: api.runtime.getURL("result.html") + "?url=" + encodeURIComponent(url),
   });
 }
 
@@ -397,6 +445,8 @@ function renderOverlay(data) {
     .url { display: block; font-size: 11px; color: #8a9691; word-break: break-all;
            background: #f7f9f8; border-radius: 7px; padding: 6px 8px; margin-bottom: 9px; }
     .msg { font-size: 12.5px; line-height: 1.5; margin: 0; color: #33403b; }
+    .excl { font-size: 11.5px; color: #5d6b66; background: #f0f3f2; border-radius: 7px;
+            padding: 6px 8px; margin: 0 0 9px; }
     .meter { height: 5px; border-radius: 99px; background: rgba(31,42,39,.09);
              margin: 10px 0 4px; overflow: hidden; }
     .meter i { display: block; height: 100%; background: ${tone.accent}; }
@@ -417,6 +467,7 @@ function renderOverlay(data) {
     <div class="body">
       <div class="verdict"></div>
       <code class="url"></code>
+      <p class="excl" hidden>On your exclusion list. Checked because you asked.</p>
       <p class="msg"></p>
       <div class="meter"><i></i></div>
       <div class="score"></div>
@@ -429,6 +480,7 @@ function renderOverlay(data) {
   card.querySelector(".verdict").textContent = data.label;
   card.querySelector(".url").textContent = data.url;
   card.querySelector(".msg").textContent = data.message;
+  card.querySelector(".excl").hidden = !data.excluded;
 
   if (data.status === "error") {
     card.querySelector(".meter").remove();
@@ -454,26 +506,142 @@ function renderOverlay(data) {
   window.__chickCheckTimer = setTimeout(close, 12000);
 }
 
-function syncAll() {
-  syncAutoScan();
-  syncBlocking();
+// --- Listeners ----------------------------------------------------
+// Blocking and auto-scan react to navigation and tab events. Their
+// listeners are registered once, synchronously, at the top level of
+// this script, and each handler checks whether its feature is on.
+//
+// They used to be added and removed as settings changed, after an
+// await. That breaks once the background goes idle: Chrome stops the
+// service worker and Firefox unloads the event page, and when the next
+// event arrives the browser only wakes the script for listeners that
+// were registered during its first synchronous run. A listener added
+// after an await is not one of them — so a navigation after an idle
+// spell could load without being checked, and a dangerous page would
+// not be blocked.
+
+// What is switched on right now: the settings plus whether the matching
+// permissions are actually granted (they can be revoked from the
+// browser's own UI, so the stored flag alone is not enough).
+let state = null; // { settings, blocking, autoScan } once read
+let stateSeq = 0;
+let settingsReady = null; // the first read after the background starts
+
+const ALL_OFF = { settings: DEFAULT_SETTINGS, blocking: false, autoScan: false };
+
+async function readState() {
+  const seq = ++stateSeq;
+  let next;
+  try {
+    const settings = await getSettings();
+    const [canBlock, hasTabs] = await Promise.all([
+      api.permissions.contains(BLOCKING_PERMISSIONS),
+      api.permissions.contains({ permissions: ["tabs"] }),
+    ]);
+    next = {
+      settings,
+      blocking: settings.blockingEnabled && canBlock,
+      autoScan: settings.autoScanEnabled && hasTabs,
+    };
+  } catch {
+    next = state ?? ALL_OFF;
+  }
+  // Two changes in quick succession: only the newest read may win.
+  if (seq === stateSeq) state = next;
+  return next;
 }
 
-chrome.runtime.onInstalled.addListener(syncAll);
-chrome.runtime.onStartup.addListener(syncAll);
+// Already known in the common case. Right after a wake-up, the handler
+// waits for the one storage read that is still in flight.
+async function currentState() {
+  return state ?? (await settingsReady);
+}
+
+async function syncAll() {
+  const next = await readState();
+  if (!next.autoScan) clearBadges();
+}
+
+// --- Sites the user excluded (lib/exclusions.js) ------------------
+// Held in memory like the settings, so the navigation handler can decide
+// without waiting. Refreshed on every change, including ones synced in
+// from another device.
+let exclusions = null; // Map host -> { m, t } once read
+let exclusionsSeq = 0;
+let exclusionsReady = null;
+
+async function readExclusions() {
+  const seq = ++exclusionsSeq;
+  const next = await loadExclusions();
+  if (seq === exclusionsSeq) exclusions = next;
+  return exclusions ?? next;
+}
+
+async function currentExclusions() {
+  return exclusions ?? (await exclusionsReady);
+}
+
+// After a change, only the tabs whose site moved in or out of the list
+// need attention: an added site drops its cached verdict and pauses, a
+// removed one is scanned again.
+async function exclusionsChanged() {
+  const before = exclusions ?? new Map();
+  const after = await readExclusions();
+
+  let tabs = [];
+  try {
+    tabs = await api.tabs.query({});
+  } catch {
+    return;
+  }
+  const { autoScan } = await currentState();
+  for (const tab of tabs) {
+    if (!tab.url || !CHECKABLE.test(tab.url)) continue;
+    const was = isExcluded(tab.url, before);
+    const now = isExcluded(tab.url, after);
+    if (was === now) continue;
+    if (now) await cacheDelete(new URL(tab.url).hostname);
+    if (autoScan) updateBadgeForTab(tab.id, tab.url).catch(() => {});
+  }
+}
+
+// webNavigation only exists once its optional permission is granted, so
+// it is attached at startup if it is there, and again when it arrives.
+function listenForNavigation() {
+  const nav = api.webNavigation;
+  if (nav && !nav.onBeforeNavigate.hasListener(onBeforeNavigate)) {
+    nav.onBeforeNavigate.addListener(onBeforeNavigate);
+  }
+}
+
+listenForNavigation();
+api.tabs.onUpdated.addListener(onTabUpdated);
+api.tabs.onActivated.addListener(onTabActivated);
+
+settingsReady = readState();
+settingsReady.then((s) => s.autoScan || clearBadges());
+exclusionsReady = readExclusions();
+
+onSettingsChanged(syncAll);
+onExclusionsChanged(() => exclusionsChanged().catch(() => {}));
+api.permissions.onAdded.addListener(() => {
+  listenForNavigation();
+  syncAll();
+});
+api.permissions.onRemoved.addListener(syncAll);
+
+// Firefox's default badge text colour is dark, which is unreadable on
+// the red and amber badges. Chrome defaults to white; set it for both.
+safe(() => api.action.setBadgeTextColor({ color: "#fff" }));
 
 // Menus are static, so they are built once per worker start rather than
 // torn down and recreated on every settings change.
-chrome.runtime.onInstalled.addListener(buildMenus);
-chrome.runtime.onStartup.addListener(buildMenus);
+api.runtime.onInstalled.addListener(buildMenus);
+api.runtime.onStartup.addListener(buildMenus);
 buildMenus();
-onSettingsChanged(syncAll);
-chrome.permissions.onAdded.addListener(syncAll);
-chrome.permissions.onRemoved.addListener(syncAll);
-syncAll();
 
 // Show what the extension does on first install rather than leaving the
 // user to discover that network checks are already on.
-chrome.runtime.onInstalled.addListener(({ reason }) => {
-  if (reason === "install") chrome.runtime.openOptionsPage();
+api.runtime.onInstalled.addListener(({ reason }) => {
+  if (reason === "install") api.runtime.openOptionsPage();
 });
